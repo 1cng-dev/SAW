@@ -1,4 +1,4 @@
-import { AlertOctagon, FileWarning, Newspaper, ShieldCheck, Skull, Search } from "lucide-react";
+import { AlertOctagon, FileWarning, Newspaper, ShieldCheck, Skull, Search, TrendingUp, Activity, Clock, AlertCircle } from "lucide-react";
 import { Box, Heading, HStack, SimpleGrid, Skeleton, Stack, Text, Wrap, VStack } from "@chakra-ui/react";
 import { useCves, useNews, useStats, useTrendingCves, useVendors, useDisclosureTrend, useStatTrend } from "../api/hooks";
 import { StatCard } from "../components/ui/StatCard";
@@ -9,6 +9,7 @@ import { NewsCard } from "../components/news/NewsCard";
 import { VendorChip } from "../components/vendors/VendorChip";
 import { Sparkline } from "../components/charts/Sparkline";
 import { TrendLineChart } from "../components/charts/TrendLineChart";
+import { SeverityDonut } from "../components/charts/SeverityDonut";
 import { DateRangeFilter, DateRangeOption } from "../components/ui/DateRangeFilter";
 import { LiveIndicator } from "../components/ui/LiveIndicator";
 import { useDateRange } from "../contexts/DateRangeContext";
@@ -44,6 +45,7 @@ export function HomePage() {
   // Sparkline data for stat cards (last 7 days)
   const totalCvesTrend = useStatTrend("total_cves", 7);
   const criticalTrend = useStatTrend("critical_today", 7);
+  const highTrend = useStatTrend("high_severity", 7);
   const newsTrend = useStatTrend("news_articles", 7);
   const advisoryTrend = useStatTrend("vendor_advisories", 7);
 
@@ -60,17 +62,17 @@ export function HomePage() {
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
       </HStack>
 
-      {/* Stat Cards with Sparklines */}
+      {/* Extended Stat Cards with Sparklines */}
       <Box>
         {stats.isError && <ErrorState />}
         {stats.isLoading ? (
-          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-            {Array.from({ length: 4 }).map((_, i) => (
+          <SimpleGrid columns={{ base: 2, md: 3, lg: 6 }} spacing={4}>
+            {Array.from({ length: 6 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
           </SimpleGrid>
         ) : stats.data ? (
-          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+          <SimpleGrid columns={{ base: 2, md: 3, lg: 6 }} spacing={4}>
             <StatCard 
               label="Total CVEs" 
               value={stats.data.totalCves.toLocaleString()} 
@@ -85,6 +87,13 @@ export function HomePage() {
               sparkline={criticalTrend.data?.data ? <Sparkline data={criticalTrend.data.data} color="#dc2626" /> : undefined}
             />
             <StatCard 
+              label="High Severity" 
+              value={stats.data.severityBreakdown.high.toLocaleString()} 
+              icon={AlertCircle}
+              accentColor="severity.high.500"
+              sparkline={highTrend.data?.data ? <Sparkline data={highTrend.data.data} color="#ea580c" /> : undefined}
+            />
+            <StatCard 
               label="News Articles" 
               value={stats.data.totalNewsArticles.toLocaleString()} 
               icon={Newspaper}
@@ -94,30 +103,97 @@ export function HomePage() {
               label="Vendor Advisories" 
               value={stats.data.totalVendorAdvisories.toLocaleString()} 
               icon={FileWarning}
-              sparkline={advisoryTrend.data?.data ? <Sparkline data={advisoryTrend.data.data} color="#ea580c" /> : undefined}
+              sparkline={advisoryTrend.data?.data ? <Sparkline data={advisoryTrend.data.data} color="#f97316" /> : undefined}
+            />
+            <StatCard 
+              label="Medium Severity" 
+              value={stats.data.severityBreakdown.medium.toLocaleString()} 
+              icon={Activity}
+              accentColor="severity.medium.500"
             />
           </SimpleGrid>
         ) : null}
       </Box>
 
-      {/* CVE Disclosure Trend Chart */}
-      <Box>
-        <Heading size="md" mb={3}>
-          CVE Disclosure Trend
-        </Heading>
-        <Box borderWidth="1px" borderColor="border.default" borderRadius="xl" bg="bg.surface" p={4}>
-          {disclosureTrend.isError && <ErrorState />}
-          {disclosureTrend.isLoading ? (
-            <Box h="256px">
-              <Skeleton h="full" />
-            </Box>
-          ) : disclosureTrend.data ? (
-            <TrendLineChart data={disclosureTrend.data.data} />
-          ) : (
-            <Text color="text.muted">No trend data available</Text>
-          )}
+      {/* Charts Row: Trend Line and Severity Donut */}
+      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6}>
+        {/* CVE Disclosure Trend Chart */}
+        <Box>
+          <Heading size="md" mb={3}>
+            CVE Disclosure Trend
+          </Heading>
+          <Box borderWidth="1px" borderColor="border.default" borderRadius="xl" bg="bg.surface" p={4}>
+            {disclosureTrend.isError && <ErrorState />}
+            {disclosureTrend.isLoading ? (
+              <Box h="256px">
+                <Skeleton h="full" />
+              </Box>
+            ) : disclosureTrend.data ? (
+              <TrendLineChart data={disclosureTrend.data.data} />
+            ) : (
+              <Text color="text.muted">No trend data available</Text>
+            )}
+          </Box>
         </Box>
-      </Box>
+
+        {/* Severity Breakdown Donut Chart */}
+        <Box>
+          <Heading size="md" mb={3}>
+            Severity Distribution
+          </Heading>
+          <Box borderWidth="1px" borderColor="border.default" borderRadius="xl" bg="bg.surface" p={4}>
+            {stats.isError && <ErrorState />}
+            {stats.isLoading ? (
+              <Box h="256px">
+                <Skeleton h="full" />
+              </Box>
+            ) : stats.data ? (
+              <SeverityDonut breakdown={stats.data.severityBreakdown} />
+            ) : (
+              <Text color="text.muted">No severity data available</Text>
+            )}
+          </Box>
+        </Box>
+      </SimpleGrid>
+
+      {/* Additional Trend Charts */}
+      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6}>
+        {/* News Volume Trend */}
+        <Box>
+          <Heading size="md" mb={3}>
+            News Volume Trend
+          </Heading>
+          <Box borderWidth="1px" borderColor="border.default" borderRadius="xl" bg="bg.surface" p={4}>
+            {newsTrend.isLoading ? (
+              <Box h="200px">
+                <Skeleton h="full" />
+              </Box>
+            ) : newsTrend.data ? (
+              <TrendLineChart data={newsTrend.data.data} color="#22d3ee" />
+            ) : (
+              <Text color="text.muted">No news trend data available</Text>
+            )}
+          </Box>
+        </Box>
+
+        {/* Vendor Advisory Trend */}
+        <Box>
+          <Heading size="md" mb={3}>
+            Vendor Advisory Trend
+          </Heading>
+          <Box borderWidth="1px" borderColor="border.default" borderRadius="xl" bg="bg.surface" p={4}>
+            {advisoryTrend.isLoading ? (
+              <Box h="200px">
+                <Skeleton h="full" />
+              </Box>
+            ) : advisoryTrend.data ? (
+              <TrendLineChart data={advisoryTrend.data.data} color="#f97316" />
+            ) : (
+              <Text color="text.muted">No advisory trend data available</Text>
+            )}
+          </Box>
+        </Box>
+      </SimpleGrid>
 
       <VStack spacing={8} align="stretch">
         {/* Today's Critical CVEs */}

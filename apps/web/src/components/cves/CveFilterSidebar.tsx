@@ -12,6 +12,7 @@ import {
   Stack,
   Switch,
   Text,
+  Divider,
 } from "@chakra-ui/react";
 import { SEVERITIES } from "@sec1cng/shared";
 import type { CveFilters } from "../../api/hooks";
@@ -66,22 +67,22 @@ export function CveFilterSidebar({ onChange }: { onChange: (filters: Partial<Cve
     <Box
       as="aside"
       w="full"
-      minW={{ md: "260px" }}
-      maxW={{ md: "260px" }}
+      minW={{ md: "280px" }}
+      maxW={{ md: "280px" }}
       borderWidth={{ base: 0, md: "1px" }}
       borderColor="border.default"
       bg={{ base: "transparent", md: "bg.surface" }}
       borderRadius="xl"
-      p={{ base: 0, md: 4 }}
+      p={{ base: 0, md: 5 }}
     >
       <Stack spacing={6}>
         <Box>
-          <Heading size="xs" textTransform="uppercase" letterSpacing="wide" color="text.muted" mb={2}>
+          <Heading size="xs" textTransform="uppercase" letterSpacing="wide" color="text.muted" mb={3}>
             Severity
           </Heading>
           <form.Field name="severity" mode="array">
             {(field) => (
-              <Stack spacing={1.5}>
+              <Stack spacing={2}>
                 {SEVERITIES.filter((s) => s !== "unknown").map((severity) => (
                   <Checkbox
                     key={severity}
@@ -90,8 +91,10 @@ export function CveFilterSidebar({ onChange }: { onChange: (filters: Partial<Cve
                       if (e.target.checked) field.pushValue(severity);
                       else field.removeValue(field.state.value.indexOf(severity));
                     }}
+                    colorScheme="orange"
+                    size="sm"
                   >
-                    <Text textTransform="capitalize" fontSize="sm">
+                    <Text textTransform="capitalize" fontSize="sm" color="text.muted">
                       {severity}
                     </Text>
                   </Checkbox>
@@ -101,9 +104,11 @@ export function CveFilterSidebar({ onChange }: { onChange: (filters: Partial<Cve
           </form.Field>
         </Box>
 
+        <Divider borderColor="border.default" />
+
         <Box>
-          <Heading size="xs" textTransform="uppercase" letterSpacing="wide" color="text.muted" mb={2}>
-            Date range
+          <Heading size="xs" textTransform="uppercase" letterSpacing="wide" color="text.muted" mb={3}>
+            Date Range
           </Heading>
           <Stack spacing={2}>
             <form.Field name="dateFrom">
@@ -113,6 +118,10 @@ export function CveFilterSidebar({ onChange }: { onChange: (filters: Partial<Cve
                   type="date"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
+                  borderColor="border.default"
+                  _hover={{ borderColor: "accent.400" }}
+                  _focus={{ borderColor: "accent.400", boxShadow: "0 0 0 1px #f97316" }}
+                  bg="charcoal.800"
                 />
               )}
             </form.Field>
@@ -123,14 +132,20 @@ export function CveFilterSidebar({ onChange }: { onChange: (filters: Partial<Cve
                   type="date"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
+                  borderColor="border.default"
+                  _hover={{ borderColor: "accent.400" }}
+                  _focus={{ borderColor: "accent.400", boxShadow: "0 0 0 1px #f97316" }}
+                  bg="charcoal.800"
                 />
               )}
             </form.Field>
           </Stack>
         </Box>
 
+        <Divider borderColor="border.default" />
+
         <Box>
-          <Heading size="xs" textTransform="uppercase" letterSpacing="wide" color="text.muted" mb={2}>
+          <Heading size="xs" textTransform="uppercase" letterSpacing="wide" color="text.muted" mb={3}>
             Vendor
           </Heading>
           <form.Field name="vendor">
@@ -140,21 +155,27 @@ export function CveFilterSidebar({ onChange }: { onChange: (filters: Partial<Cve
                 placeholder="e.g. cisco"
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
+                borderColor="border.default"
+                _hover={{ borderColor: "accent.400" }}
+                _focus={{ borderColor: "accent.400", boxShadow: "0 0 0 1px #f97316" }}
+                bg="charcoal.800"
               />
             )}
           </form.Field>
         </Box>
 
+        <Divider borderColor="border.default" />
+
         <Box>
-          <Heading size="xs" textTransform="uppercase" letterSpacing="wide" color="text.muted" mb={2}>
-            CVSS range
+          <Heading size="xs" textTransform="uppercase" letterSpacing="wide" color="text.muted" mb={3}>
+            CVSS Range
           </Heading>
           <form.Field name="minCvss">
             {(minField) => (
               <form.Field name="maxCvss">
                 {(maxField) => (
-                  <Stack spacing={2}>
-                    <Box display="flex" justifyContent="space-between" fontSize="xs" color="text.muted">
+                  <Stack spacing={3}>
+                    <Box display="flex" justifyContent="space-between" fontSize="xs" color="text.muted" fontFamily="mono">
                       <Text>{minField.state.value.toFixed(1)}</Text>
                       <Text>{maxField.state.value.toFixed(1)}</Text>
                     </Box>
@@ -167,13 +188,13 @@ export function CveFilterSidebar({ onChange }: { onChange: (filters: Partial<Cve
                         minField.handleChange(min);
                         maxField.handleChange(max);
                       }}
-                      colorScheme="blue"
+                      colorScheme="orange"
                     >
-                      <RangeSliderTrack>
+                      <RangeSliderTrack bg="charcoal.800">
                         <RangeSliderFilledTrack />
                       </RangeSliderTrack>
-                      <RangeSliderThumb index={0} />
-                      <RangeSliderThumb index={1} />
+                      <RangeSliderThumb index={0} boxSize={4} />
+                      <RangeSliderThumb index={1} boxSize={4} />
                     </RangeSlider>
                   </Stack>
                 )}
@@ -182,20 +203,30 @@ export function CveFilterSidebar({ onChange }: { onChange: (filters: Partial<Cve
           </form.Field>
         </Box>
 
-        <Stack spacing={3}>
+        <Divider borderColor="border.default" />
+
+        <Stack spacing={4}>
           <form.Field name="hasPoc">
             {(field) => (
               <Box display="flex" alignItems="center" justifyContent="space-between">
-                <Text fontSize="sm">Has PoC</Text>
-                <Switch isChecked={field.state.value} onChange={(e) => field.handleChange(e.target.checked)} />
+                <Text fontSize="sm" color="text.muted">Has PoC</Text>
+                <Switch 
+                  isChecked={field.state.value} 
+                  onChange={(e) => field.handleChange(e.target.checked)}
+                  colorScheme="orange"
+                />
               </Box>
             )}
           </form.Field>
           <form.Field name="isExploited">
             {(field) => (
               <Box display="flex" alignItems="center" justifyContent="space-between">
-                <Text fontSize="sm">Exploited in the wild</Text>
-                <Switch isChecked={field.state.value} onChange={(e) => field.handleChange(e.target.checked)} />
+                <Text fontSize="sm" color="text.muted">Exploited in the wild</Text>
+                <Switch 
+                  isChecked={field.state.value} 
+                  onChange={(e) => field.handleChange(e.target.checked)}
+                  colorScheme="orange"
+                />
               </Box>
             )}
           </form.Field>

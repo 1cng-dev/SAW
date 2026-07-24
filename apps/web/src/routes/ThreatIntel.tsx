@@ -1,18 +1,210 @@
-import { Box, Heading, Text } from "@chakra-ui/react";
-import { Search } from "lucide-react";
+import { useState } from "react";
+import { Box, Heading, Text, Input, Button, VStack, HStack, Badge, SimpleGrid, Alert, AlertIcon, AlertTitle, AlertDescription, Code, Link } from "@chakra-ui/react";
+import { Search, Shield, AlertTriangle, CheckCircle, HelpCircle, ExternalLink } from "lucide-react";
+import { useThreatIntelLookup } from "../api/hooks";
 
 export function ThreatIntelPage() {
+  const [indicator, setIndicator] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const { data, isLoading, isError, error } = useThreatIntelLookup(searchQuery);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (indicator.trim()) {
+      setSearchQuery(indicator.trim());
+    }
+  };
+
+  const getVerdictColor = (verdict: string) => {
+    switch (verdict) {
+      case "malicious": return "red";
+      case "suspicious": return "orange";
+      case "clean": return "green";
+      default: return "gray";
+    }
+  };
+
+  const getVerdictIcon = (verdict: string) => {
+    switch (verdict) {
+      case "malicious": return AlertTriangle;
+      case "suspicious": return AlertTriangle;
+      case "clean": return CheckCircle;
+      default: return HelpCircle;
+    }
+  };
+
   return (
     <Box>
       <Heading size="lg" mb={2}>
         Threat Intel / IOC Lookup
       </Heading>
-      <Text color="text.muted">
+      <Text color="text.muted" mb={6}>
         Search and analyze indicators of compromise (IPs, domains, hashes, URLs).
       </Text>
-      <Box mt={8} p={8} borderWidth="1px" borderColor="border.default" borderRadius="xl" bg="bg.surface">
-        <Text color="text.muted">Coming soon - Threat Intel / IOC Lookup page</Text>
+
+      <Box as="form" onSubmit={handleSearch} mb={8}>
+        <HStack>
+          <Input
+            value={indicator}
+            onChange={(e) => setIndicator(e.target.value)}
+            placeholder="Enter IP, domain, hash, or URL..."
+            size="lg"
+            fontFamily="mono"
+          />
+          <Button type="submit" size="lg" colorScheme="orange" isLoading={isLoading}>
+            <Search size={18} />
+          </Button>
+        </HStack>
       </Box>
+
+      {isError && (
+        <Alert status="error" mb={6}>
+          <AlertIcon />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            {(error as Error)?.message || "Failed to lookup indicator"}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {data && (
+        <VStack spacing={6} align="stretch">
+          {/* Verdict Card */}
+          <Box borderWidth="1px" borderColor="border.default" borderRadius="xl" bg="bg.surface" p={6}>
+            <HStack justify="space-between" mb={4}>
+              <HStack spacing={3}>
+                <Code fontSize="lg" fontFamily="mono" color="accent.400">
+                  {data.indicator}
+                </Code>
+                <Badge colorScheme={getVerdictColor(data.verdict)} fontSize="sm" px={3} py={1}>
+                  {data.indicatorType?.toUpperCase()}
+                </Badge>
+              </HStack>
+              <HStack spacing={2}>
+                {(() => {
+                  const Icon = getVerdictIcon(data.verdict);
+                  return <Icon size={20} color={getVerdictColor(data.verdict) === "red" ? "#dc2626" : getVerdictColor(data.verdict) === "orange" ? "#ea580c" : getVerdictColor(data.verdict) === "green" ? "#22c55e" : "#64748b"} />;
+                })()}
+                <Badge colorScheme={getVerdictColor(data.verdict)} fontSize="md" px={3} py={1} textTransform="capitalize">
+                  {data.verdict}
+                </Badge>
+              </HStack>
+            </HStack>
+            <HStack spacing={4}>
+              <Text fontSize="sm" color="text.muted">
+                Confidence: <Text as="span" fontWeight="medium" textTransform="capitalize">{data.confidence}</Text>
+              </Text>
+              {data.hasExternalAPI && (
+                <Badge colorScheme="purple" variant="outline" fontSize="xs">
+                  External APIs Enabled
+                </Badge>
+              )}
+            </HStack>
+          </Box>
+
+          {/* Sources */}
+          {data.sources && data.sources.length > 0 && (
+            <Box borderWidth="1px" borderColor="border.default" borderRadius="xl" bg="bg.surface" p={6}>
+              <Heading size="md" mb={4}>Sources</Heading>
+              <VStack spacing={2} align="stretch">
+                {data.sources.map((source: string, idx: number) => (
+                  <Text key={idx} fontSize="sm" fontFamily="mono" color="text.muted">
+                    {source}
+                  </Text>
+                ))}
+              </VStack>
+            </Box>
+          )}
+
+          {/* CVE Matches */}
+          {data.cveMatches && data.cveMatches.length > 0 && (
+            <Box borderWidth="1px" borderColor="border.default" borderRadius="xl" bg="bg.surface" p={6}>
+              <Heading size="md" mb={4}>Related CVEs ({data.cveMatches.length})</Heading>
+              <VStack spacing={3} align="stretch">
+                {data.cveMatches.map((cve: any) => (
+                  <Box key={cve.id} p={4} borderWidth="1px" borderColor="border.default" borderRadius="md" bg="charcoal.800">
+                    <HStack justify="space-between" mb={2}>
+                      <Code fontSize="sm" fontFamily="mono" color="accent.400">{cve.id}</Code>
+                      <Badge colorScheme={cve.severity === "critical" ? "red" : cve.severity === "high" ? "orange" : cve.severity === "medium" ? "yellow" : "blue"} fontSize="xs">
+                        {cve.severity}
+                      </Badge>
+                    </HStack>
+                    <Text fontSize="sm" color="text.muted" noOfLines={2}>
+                      {cve.description}
+                    </Text>
+                  </Box>
+                ))}
+              </VStack>
+            </Box>
+          )}
+
+          {/* News Matches */}
+          {data.newsMatches && data.newsMatches.length > 0 && (
+            <Box borderWidth="1px" borderColor="border.default" borderRadius="xl" bg="bg.surface" p={6}>
+              <Heading size="md" mb={4}>Related News ({data.newsMatches.length})</Heading>
+              <VStack spacing={3} align="stretch">
+                {data.newsMatches.map((news: any) => (
+                  <Box key={news.id} p={4} borderWidth="1px" borderColor="border.default" borderRadius="md" bg="charcoal.800">
+                    <HStack justify="space-between" mb={2}>
+                      <Text fontSize="sm" fontWeight="medium">{news.sourceName}</Text>
+                      <Text fontSize="xs" color="text.muted">
+                        {news.publishedDate ? new Date(news.publishedDate).toLocaleDateString() : "Unknown date"}
+                      </Text>
+                    </HStack>
+                    <Text fontSize="sm" color="text.muted" mb={2} noOfLines={2}>
+                      {news.title}
+                    </Text>
+                    {news.sourceUrl && (
+                      <Link href={news.sourceUrl} isExternal color="accent.400" fontSize="xs">
+                        <HStack spacing={1}>
+                          <ExternalLink size={12} />
+                          <Text>View source</Text>
+                        </HStack>
+                      </Link>
+                    )}
+                  </Box>
+                ))}
+              </VStack>
+            </Box>
+          )}
+
+          {/* External API Results */}
+          {data.externalResults && data.externalResults.length > 0 && (
+            <Box borderWidth="1px" borderColor="border.default" borderRadius="xl" bg="bg.surface" p={6}>
+              <Heading size="md" mb={4}>External API Results</Heading>
+              <VStack spacing={3} align="stretch">
+                {data.externalResults.map((result: any, idx: number) => (
+                  <Box key={idx} p={4} borderWidth="1px" borderColor="border.default" borderRadius="md" bg="charcoal.800">
+                    <HStack spacing={2} mb={2}>
+                      <Shield size={16} color="accent.400" />
+                      <Text fontSize="sm" fontWeight="medium">{result.source}</Text>
+                    </HStack>
+                    <Code fontSize="xs" color="text.muted" display="block" whiteSpace="pre-wrap">
+                      {JSON.stringify(result.data, null, 2)}
+                    </Code>
+                  </Box>
+                ))}
+              </VStack>
+            </Box>
+          )}
+
+          {!data.hasExternalAPI && (
+            <Alert status="info">
+              <AlertIcon />
+              <Box>
+                <AlertTitle>External APIs Not Configured</AlertTitle>
+                <AlertDescription>
+                  To enable enhanced threat intelligence, add the following environment variables:
+                  <Code display="block" mt={2} p={2} bg="charcoal.800" fontSize="xs">
+                    ABUSEIPDB_API_KEY=your_key_here<br />
+                    VIRUSTOTAL_API_KEY=your_key_here
+                  </Code>
+                </AlertDescription>
+              </Box>
+            </Alert>
+          )}
+        </VStack>
+      )}
     </Box>
   );
 }

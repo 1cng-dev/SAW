@@ -112,3 +112,51 @@ export function useSyncStatus() {
     refetchInterval: 30_000,
   });
 }
+
+export function useThreatIntelLookup(indicator: string) {
+  return useQuery({
+    queryKey: ["threat-intel", indicator],
+    queryFn: () => apiFetch<any>("/api/threat-intel/lookup", { indicator }),
+    enabled: indicator.length > 0,
+  });
+}
+
+export function useCveBreakdown() {
+  return useQuery({
+    queryKey: ["cve-breakdown"],
+    queryFn: () => apiFetch<{ exploitedInWild: number; hasPublicPoc: number; avgCvssScore: number; newThisWeek: number }>("/api/stats/cve-breakdown"),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useRansomwareGroups() {
+  return useQuery({
+    queryKey: ["ransomware-groups"],
+    queryFn: () => apiFetch<{ data: Array<{ name: string; slug: string; description?: string; victims?: number; active?: boolean }> }>("/api/ransomware/groups"),
+    refetchInterval: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+export function useRansomwareVictims() {
+  return useQuery({
+    queryKey: ["ransomware-victims"],
+    queryFn: () => apiFetch<{ data: Array<{ id: string; groupName: string; name: string; publishedDate: string; country?: string }> }>("/api/ransomware/victims"),
+    refetchInterval: 2 * 60 * 1000, // 2 minutes
+  });
+}
+
+export function useRansomwareStats() {
+  return useQuery({
+    queryKey: ["ransomware-stats"],
+    queryFn: () => apiFetch<{ totalGroups: number; activeGroups: number; totalVictims: number; newVictimsThisWeek: number; newVictimsThisMonth: number }>("/api/ransomware/stats"),
+    refetchInterval: 60_000, // 1 minute
+  });
+}
+
+export function useRansomwareTrends(days = 30) {
+  return useQuery({
+    queryKey: ["ransomware-trends", days],
+    queryFn: () => apiFetch<{ data: Array<{ date: string; victims: number; groups: number }> }>("/api/ransomware/trends"),
+    refetchInterval: 5 * 60 * 1000, // 5 minutes
+  });
+}

@@ -4,3 +4,5 @@ export * from "./newsArticles";
 export * from "./vendorAdvisories";
 export * from "./syncLog";
 export * from "./syncState";
+export * from "./ransomwareGroups";
+export * from "./ransomwareVictims";

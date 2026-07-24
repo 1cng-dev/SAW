@@ -1,4 +1,4 @@
-import { ilike, or, sql } from "drizzle-orm";
+import { ilike, or } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { cves, newsArticles } from "@sec1cng/db";
 
@@ -18,7 +18,7 @@ export function registerThreatIntelRoutes(app: FastifyInstance) {
     const isHash = /^[a-fA-F0-9]{32}$|^[a-fA-F0-9]{40}$|^[a-fA-F0-9]{64}$/.test(searchTerm);
     const isURL = /^https?:\/\/.+/i.test(searchTerm);
 
-    // Search in CVE descriptions and references
+    // Search in CVE descriptions
     const cveMatches = await app.db
       .select({
         id: cves.id,
@@ -28,12 +28,7 @@ export function registerThreatIntelRoutes(app: FastifyInstance) {
         source: cves.source,
       })
       .from(cves)
-      .where(
-        or(
-          ilike(cves.description, `%${searchTerm}%`),
-          sql`${cves.references::text} ILIKE ${`%${searchTerm}%`}`
-        )
-      )
+      .where(ilike(cves.description, `%${searchTerm}%`))
       .limit(20);
 
     // Search in news articles
