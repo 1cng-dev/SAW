@@ -1,0 +1,27 @@
+{
+  "name": "sec-1cng",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "db:generate": "npm run db:generate -w @sec1cng/db",
+    "db:migrate": "npm run db:migrate -w @sec1cng/db",
+    "db:studio": "npm run db:studio -w @sec1cng/db",
+    "dev:api": "npm run dev -w @sec1cng/api",
+    "dev:worker": "npm run dev -w @sec1cng/worker",
+    "dev:web": "npm run dev -w @sec1cng/web",
+    "sync:nvd": "npm run sync:nvd -w @sec1cng/worker",
+    "sync:news": "npm run sync:news -w @sec1cng/worker",
+    "sync:vendors": "npm run sync:vendors -w @sec1cng/worker"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "tsx": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
