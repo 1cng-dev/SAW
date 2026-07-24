@@ -1,23 +1,45 @@
+import { Box, Flex, Stat, StatLabel, StatNumber, useColorModeValue } from "@chakra-ui/react";
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 export function StatCard({
   label,
   value,
   icon: Icon,
-  accentClassName = "text-slate-100",
+  accentColor,
+  sparkline,
 }: {
   label: string;
   value: string | number;
   icon: LucideIcon;
-  accentClassName?: string;
+  accentColor?: string;
+  sparkline?: ReactNode;
 }) {
+  const iconColor = useColorModeValue("#94a3b8", "#64748b");
+  const hoverShadow = useColorModeValue("0 4px 12px rgba(0,0,0,0.06)", "0 0 0 1px #2a2a2a, 0 8px 20px rgba(249,115,22,0.06)");
+
   return (
-    <div className="rounded-lg border border-surface-border bg-surface-raised p-4">
-      <div className="flex items-center justify-between">
-        <span className="text-xs uppercase tracking-wide text-slate-400">{label}</span>
-        <Icon className="h-4 w-4 text-slate-500" />
-      </div>
-      <div className={`mt-2 text-2xl font-semibold font-mono-cve ${accentClassName}`}>{value}</div>
-    </div>
+    <Box
+      borderWidth="1px"
+      borderColor="border.default"
+      bg="bg.surface"
+      borderRadius="xl"
+      p={4}
+      transition="box-shadow 0.15s ease, border-color 0.15s ease"
+      _hover={{ boxShadow: hoverShadow, borderColor: "accent.solid" }}
+    >
+      <Flex justify="space-between" align="center">
+        <Stat>
+          <StatLabel fontSize="xs" textTransform="uppercase" letterSpacing="wide" color="text.muted">
+            {label}
+          </StatLabel>
+          <StatNumber fontFamily="mono" fontSize="2xl" color={accentColor}>
+            {value}
+          </StatNumber>
+        </Stat>
+        <Icon size={16} color={iconColor} />
+      </Flex>
+      {sparkline && <Box mt={2}>{sparkline}</Box>}
+    </Box>
   );
 }

@@ -1,37 +1,54 @@
+import { Box, HStack, LinkBox, LinkOverlay, Tag, Text, Wrap } from "@chakra-ui/react";
 import { ExternalLink } from "lucide-react";
 import type { NewsArticle } from "../../api/types";
 
 export function NewsCard({ article }: { article: NewsArticle }) {
   return (
-    <a
-      href={article.sourceUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block rounded-lg border border-surface-border bg-surface-raised p-4 transition hover:border-slate-500"
+    <LinkBox
+      as={Box}
+      borderWidth="1px"
+      borderColor="border.default"
+      bg="bg.surface"
+      borderRadius="xl"
+      p={4}
+      transition="border-color 0.15s ease"
+      _hover={{ borderColor: "accent.solid" }}
     >
-      <div className="flex items-center justify-between gap-2 text-xs text-slate-400">
-        <span>{article.sourceName}</span>
+      <HStack justify="space-between" fontSize="xs" color="text.muted" mb={2}>
+        <Text>{article.sourceName}</Text>
         {article.category && (
-          <span className="rounded bg-slate-800 px-2 py-0.5 text-slate-300">{article.category}</span>
+          <Tag size="sm" variant="subtle">
+            {article.category}
+          </Tag>
         )}
-      </div>
-      <h3 className="mt-2 flex items-start justify-between gap-2 text-sm font-medium text-slate-100">
-        <span>{article.title}</span>
-        <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" />
-      </h3>
-      {article.excerpt && <p className="mt-2 line-clamp-3 text-sm text-slate-400">{article.excerpt}</p>}
+      </HStack>
+      <HStack align="start" justify="space-between" spacing={2}>
+        <LinkOverlay href={article.sourceUrl} isExternal>
+          <Text fontSize="sm" fontWeight="medium">
+            {article.title}
+          </Text>
+        </LinkOverlay>
+        <ExternalLink size={14} style={{ flexShrink: 0, marginTop: 2, opacity: 0.5 }} />
+      </HStack>
+      {article.excerpt && (
+        <Text mt={2} fontSize="sm" color="text.muted" noOfLines={3}>
+          {article.excerpt}
+        </Text>
+      )}
       {article.relatedCveIds.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
+        <Wrap mt={2} spacing={1}>
           {article.relatedCveIds.map((id) => (
-            <span key={id} className="font-mono-cve rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-300">
+            <Tag key={id} size="sm" fontFamily="mono" fontSize="10px" variant="subtle">
               {id}
-            </span>
+            </Tag>
           ))}
-        </div>
+        </Wrap>
       )}
       {article.publishedDate && (
-        <div className="mt-2 text-xs text-slate-500">{new Date(article.publishedDate).toLocaleDateString()}</div>
+        <Text mt={2} fontSize="xs" color="text.muted">
+          {new Date(article.publishedDate).toLocaleDateString()}
+        </Text>
       )}
-    </a>
+    </LinkBox>
   );
 }

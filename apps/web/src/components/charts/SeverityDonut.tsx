@@ -1,4 +1,5 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { Center, Text, useColorModeValue } from "@chakra-ui/react";
 
 const COLORS: Record<string, string> = {
   critical: "#dc2626",
@@ -9,12 +10,22 @@ const COLORS: Record<string, string> = {
 };
 
 export function SeverityDonut({ breakdown }: { breakdown: Record<string, number> }) {
+  const tooltipBg = useColorModeValue("#ffffff", "#1e293b");
+  const tooltipBorder = useColorModeValue("#e2e8f0", "#334155");
+  const tooltipText = useColorModeValue("#0f172a", "#e2e8f0");
+
   const data = Object.entries(breakdown)
     .filter(([, value]) => value > 0)
     .map(([severity, value]) => ({ name: severity, value }));
 
   if (data.length === 0) {
-    return <div className="flex h-56 items-center justify-center text-sm text-slate-500">No data yet</div>;
+    return (
+      <Center h="224px">
+        <Text fontSize="sm" color="text.muted">
+          No data yet
+        </Text>
+      </Center>
+    );
   }
 
   return (
@@ -26,8 +37,8 @@ export function SeverityDonut({ breakdown }: { breakdown: Record<string, number>
           ))}
         </Pie>
         <Tooltip
-          contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8, fontSize: 12 }}
-          labelStyle={{ color: "#e2e8f0", textTransform: "capitalize" }}
+          contentStyle={{ background: tooltipBg, border: `1px solid ${tooltipBorder}`, borderRadius: 8, fontSize: 12 }}
+          labelStyle={{ color: tooltipText, textTransform: "capitalize" }}
         />
       </PieChart>
     </ResponsiveContainer>

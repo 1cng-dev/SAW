@@ -1,11 +1,17 @@
-import { AlertOctagon, FileWarning, Newspaper, ShieldCheck } from "lucide-react";
-import { useCves, useNews, useStats, useTrendingCves, useVendors } from "../api/hooks";
+import { AlertOctagon, FileWarning, Newspaper, ShieldCheck, Skull, Search } from "lucide-react";
+import { Box, Heading, HStack, SimpleGrid, Skeleton, Stack, Text, Wrap, VStack } from "@chakra-ui/react";
+import { useCves, useNews, useStats, useTrendingCves, useVendors, useDisclosureTrend, useStatTrend } from "../api/hooks";
 import { StatCard } from "../components/ui/StatCard";
 import { SkeletonCard } from "../components/ui/Skeleton";
 import { ErrorState } from "../components/ui/ErrorState";
 import { CveCard } from "../components/cves/CveCard";
 import { NewsCard } from "../components/news/NewsCard";
 import { VendorChip } from "../components/vendors/VendorChip";
+import { Sparkline } from "../components/charts/Sparkline";
+import { TrendLineChart } from "../components/charts/TrendLineChart";
+import { DateRangeFilter, DateRangeOption } from "../components/ui/DateRangeFilter";
+import { LiveIndicator } from "../components/ui/LiveIndicator";
+import { useDateRange } from "../contexts/DateRangeContext";
 
 function todayIso() {
   const d = new Date();
@@ -14,120 +20,210 @@ function todayIso() {
 }
 
 export function HomePage() {
+  const { dateRange, setDateRange, getDateRangeParams } = useDateRange();
   const stats = useStats();
-  const criticalToday = useCves({ severity: "critical", dateFrom: todayIso(), pageSize: 8, sortBy: "publishedDate", sortDir: "desc" });
+  const { dateFrom, dateTo } = getDateRangeParams();
+  
+  const criticalToday = useCves({ 
+    severity: "critical", 
+    dateFrom: todayIso(), 
+    pageSize: 8, 
+    sortBy: "publishedDate", 
+    sortDir: "desc" 
+  });
   const trending = useTrendingCves(10);
   const news = useNews({ pageSize: 6 });
   const vendors = useVendors();
+  const disclosureTrend = useDisclosureTrend(
+    dateRange === "today" ? 1 : 
+    dateRange === "7d" ? 7 : 
+    dateRange === "30d" ? 30 : 
+    dateRange === "90d" ? 90 : 30
+  );
+  
+  // Sparkline data for stat cards (last 7 days)
+  const totalCvesTrend = useStatTrend("total_cves", 7);
+  const criticalTrend = useStatTrend("critical_today", 7);
+  const newsTrend = useStatTrend("news_articles", 7);
+  const advisoryTrend = useStatTrend("vendor_advisories", 7);
+
+  const lastUpdated = stats.dataUpdatedAt ? new Date(stats.dataUpdatedAt).toISOString() : null;
 
   return (
-    <div className="space-y-10">
-      <section>
+    <Stack spacing={10}>
+      {/* Header with live indicator and date filter */}
+      <HStack justify="space-between" align="center">
+        <HStack spacing={3}>
+          <Heading size="lg">Dashboard</Heading>
+          <LiveIndicator lastUpdated={lastUpdated} />
+        </HStack>
+        <DateRangeFilter value={dateRange} onChange={setDateRange} />
+      </HStack>
+
+      {/* Stat Cards with Sparklines */}
+      <Box>
         {stats.isError && <ErrorState />}
         {stats.isLoading ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
             {Array.from({ length: 4 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
-          </div>
+          </SimpleGrid>
         ) : stats.data ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            <StatCard label="Total CVEs" value={stats.data.totalCves.toLocaleString()} icon={ShieldCheck} />
+          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+            <StatCard 
+              label="Total CVEs" 
+              value={stats.data.totalCves.toLocaleString()} 
+              icon={ShieldCheck}
+              sparkline={totalCvesTrend.data?.data ? <Sparkline data={totalCvesTrend.data.data} color="#a78bfa" /> : undefined}
+            />
             <StatCard
               label="Critical Today"
               value={stats.data.todayCriticalCves}
               icon={AlertOctagon}
-              accentClassName="text-severity-critical"
+              accentColor="severity.critical.500"
+              sparkline={criticalTrend.data?.data ? <Sparkline data={criticalTrend.data.data} color="#dc2626" /> : undefined}
             />
-            <StatCard label="News Articles" value={stats.data.totalNewsArticles.toLocaleString()} icon={Newspaper} />
-            <StatCard label="Vendor Advisories" value={stats.data.totalVendorAdvisories.toLocaleString()} icon={FileWarning} />
-          </div>
+            <StatCard 
+              label="News Articles" 
+              value={stats.data.totalNewsArticles.toLocaleString()} 
+              icon={Newspaper}
+              sparkline={newsTrend.data?.data ? <Sparkline data={newsTrend.data.data} color="#22d3ee" /> : undefined}
+            />
+            <StatCard 
+              label="Vendor Advisories" 
+              value={stats.data.totalVendorAdvisories.toLocaleString()} 
+              icon={FileWarning}
+              sparkline={advisoryTrend.data?.data ? <Sparkline data={advisoryTrend.data.data} color="#ea580c" /> : undefined}
+            />
+          </SimpleGrid>
         ) : null}
-      </section>
+      </Box>
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold text-slate-100">Today's Critical CVEs</h2>
-        {criticalToday.isError && <ErrorState />}
-        {criticalToday.isLoading ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
-          </div>
-        ) : criticalToday.data && criticalToday.data.data.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {criticalToday.data.data.map((cve) => (
-              <CveCard key={cve.id} cve={cve} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-slate-500">No new critical CVEs published today yet.</p>
-        )}
-      </section>
+      {/* CVE Disclosure Trend Chart */}
+      <Box>
+        <Heading size="md" mb={3}>
+          CVE Disclosure Trend
+        </Heading>
+        <Box borderWidth="1px" borderColor="border.default" borderRadius="xl" bg="bg.surface" p={4}>
+          {disclosureTrend.isError && <ErrorState />}
+          {disclosureTrend.isLoading ? (
+            <Box h="256px">
+              <Skeleton h="full" />
+            </Box>
+          ) : disclosureTrend.data ? (
+            <TrendLineChart data={disclosureTrend.data.data} />
+          ) : (
+            <Text color="text.muted">No trend data available</Text>
+          )}
+        </Box>
+      </Box>
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold text-slate-100">Trending CVEs</h2>
-        {trending.isError && <ErrorState />}
-        {trending.isLoading ? (
-          <div className="flex gap-4 overflow-x-auto pb-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="w-72 shrink-0">
-                <SkeletonCard />
-              </div>
-            ))}
-          </div>
-        ) : trending.data && trending.data.data.length > 0 ? (
-          <div className="flex gap-4 overflow-x-auto pb-2">
-            {trending.data.data.map((cve) => (
-              <div key={cve.id} className="w-72 shrink-0">
-                <CveCard cve={cve} />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-slate-500">Trending scores haven't been calculated yet.</p>
-        )}
-      </section>
+      <VStack spacing={8} align="stretch">
+        {/* Today's Critical CVEs */}
+        <Box>
+          <Heading size="md" mb={3}>
+            Today's Critical CVEs
+          </Heading>
+          {criticalToday.isError && <ErrorState />}
+          {criticalToday.isLoading ? (
+            <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={4}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <SkeletonCard key={i} />
+              ))}
+            </SimpleGrid>
+          ) : criticalToday.data && criticalToday.data.data.length > 0 ? (
+            <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={4}>
+              {criticalToday.data.data.map((cve) => (
+                <CveCard key={cve.id} cve={cve} />
+              ))}
+            </SimpleGrid>
+          ) : (
+            <Text fontSize="sm" color="text.muted">
+              No new critical CVEs published today yet.
+            </Text>
+          )}
+        </Box>
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold text-slate-100">Latest Security News</h2>
-        {news.isError && <ErrorState />}
-        {news.isLoading ? (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
-          </div>
-        ) : news.data && news.data.data.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {news.data.data.map((article) => (
-              <NewsCard key={article.id} article={article} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-slate-500">No news articles ingested yet.</p>
-        )}
-      </section>
+        {/* Trending CVEs */}
+        <Box>
+          <Heading size="md" mb={3}>
+            Trending CVEs
+          </Heading>
+          {trending.isError && <ErrorState />}
+          {trending.isLoading ? (
+            <HStack spacing={4} overflowX="auto" pb={2} align="stretch">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Box key={i} w="288px" flexShrink={0}>
+                  <SkeletonCard />
+                </Box>
+              ))}
+            </HStack>
+          ) : trending.data && trending.data.data.length > 0 ? (
+            <HStack spacing={4} overflowX="auto" pb={2} align="stretch">
+              {trending.data.data.map((cve) => (
+                <Box key={cve.id} w="288px" flexShrink={0}>
+                  <CveCard cve={cve} />
+                </Box>
+              ))}
+            </HStack>
+          ) : (
+            <Text fontSize="sm" color="text.muted">
+              Trending scores haven't been calculated yet.
+            </Text>
+          )}
+        </Box>
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold text-slate-100">Browse by Vendor</h2>
-        {vendors.isError && <ErrorState />}
-        {vendors.isLoading ? (
-          <div className="flex flex-wrap gap-2">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="h-9 w-24 skeleton rounded-full bg-slate-700/50" />
-            ))}
-          </div>
-        ) : vendors.data && vendors.data.data.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {vendors.data.data.map((vendor) => (
-              <VendorChip key={vendor.vendor} vendor={vendor} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-slate-500">No vendor data available yet.</p>
-        )}
-      </section>
-    </div>
+        {/* Latest Security News */}
+        <Box>
+          <Heading size="md" mb={3}>
+            Latest Security News
+          </Heading>
+          {news.isError && <ErrorState />}
+          {news.isLoading ? (
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <SkeletonCard key={i} />
+              ))}
+            </SimpleGrid>
+          ) : news.data && news.data.data.length > 0 ? (
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+              {news.data.data.map((article) => (
+                <NewsCard key={article.id} article={article} />
+              ))}
+            </SimpleGrid>
+          ) : (
+            <Text fontSize="sm" color="text.muted">
+              No news articles ingested yet.
+            </Text>
+          )}
+        </Box>
+
+        {/* Browse by Vendor */}
+        <Box>
+          <Heading size="md" mb={3}>
+            Browse by Vendor
+          </Heading>
+          {vendors.isError && <ErrorState />}
+          {vendors.isLoading ? (
+            <Wrap spacing={2}>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} height="36px" width="96px" borderRadius="full" />
+              ))}
+            </Wrap>
+          ) : vendors.data && vendors.data.data.length > 0 ? (
+            <Wrap spacing={2}>
+              {vendors.data.data.map((vendor) => (
+                <VendorChip key={vendor.vendor} vendor={vendor} />
+              ))}
+            </Wrap>
+          ) : (
+            <Text fontSize="sm" color="text.muted">
+              No vendor data available yet.
+            </Text>
+          )}
+        </Box>
+      </VStack>
+    </Stack>
   );
 }

@@ -1,5 +1,19 @@
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef, type SortingState } from "@tanstack/react-table";
 import { Link } from "@tanstack/react-router";
+import {
+  Box,
+  Button,
+  HStack,
+  Table,
+  TableContainer,
+  Tbody,
+  Td,
+  Text,
+  Th,
+  Thead,
+  Tr,
+  useColorModeValue,
+} from "@chakra-ui/react";
 import { ChevronLeft, ChevronRight, ChevronsUpDown } from "lucide-react";
 import { SeverityBadge } from "./SeverityBadge";
 import type { Cve } from "../../api/types";
@@ -9,8 +23,10 @@ const columns: ColumnDef<Cve>[] = [
     accessorKey: "id",
     header: "CVE ID",
     cell: (info) => (
-      <Link to="/cves/$cveId" params={{ cveId: info.getValue<string>() }} className="font-mono-cve text-blue-400 hover:underline">
-        {info.getValue<string>()}
+      <Link to="/cves/$cveId" params={{ cveId: info.getValue<string>() }}>
+        <Text as="span" fontFamily="mono" fontSize="sm" color="blue.400" _hover={{ textDecoration: "underline" }}>
+          {info.getValue<string>()}
+        </Text>
       </Link>
     ),
   },
@@ -22,7 +38,7 @@ const columns: ColumnDef<Cve>[] = [
   {
     accessorKey: "cvssScore",
     header: "CVSS",
-    cell: (info) => <span className="font-mono-cve">{info.getValue<string | null>() ?? "—"}</span>,
+    cell: (info) => <Text fontFamily="mono">{info.getValue<string | null>() ?? "—"}</Text>,
   },
   {
     accessorKey: "vendor",
@@ -41,10 +57,18 @@ const columns: ColumnDef<Cve>[] = [
     id: "flags",
     header: "Flags",
     cell: ({ row }) => (
-      <div className="flex gap-1 text-xs">
-        {row.original.isExploitedInWild && <span className="rounded bg-red-950 px-1.5 py-0.5 text-red-400">Exploited</span>}
-        {row.original.hasPoc && <span className="rounded bg-amber-950 px-1.5 py-0.5 text-amber-400">PoC</span>}
-      </div>
+      <HStack spacing={1}>
+        {row.original.isExploitedInWild && (
+          <Text as="span" fontSize="xs" px={1.5} py={0.5} borderRadius="sm" bg="red.900" color="red.300">
+            Exploited
+          </Text>
+        )}
+        {row.original.hasPoc && (
+          <Text as="span" fontSize="xs" px={1.5} py={0.5} borderRadius="sm" bg="orange.900" color="orange.300">
+            PoC
+          </Text>
+        )}
+      </HStack>
     ),
   },
 ];
@@ -60,6 +84,8 @@ interface CveTableProps {
 }
 
 export function CveTable({ data, total, page, pageSize, sorting, onSortingChange, onPageChange }: CveTableProps) {
+  const hoverBg = useColorModeValue("gray.50", "whiteAlpha.50");
+
   const table = useReactTable({
     data,
     columns,
@@ -76,69 +102,67 @@ export function CveTable({ data, total, page, pageSize, sorting, onSortingChange
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <div className="overflow-hidden rounded-lg border border-surface-border bg-surface-raised">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-surface-border text-xs uppercase text-slate-400">
+    <Box borderWidth="1px" borderColor="border.default" bg="bg.surface" borderRadius="xl" overflow="hidden">
+      <TableContainer>
+        <Table size="sm" variant="simple">
+          <Thead>
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
+              <Tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    onClick={header.column.getToggleSortingHandler()}
-                    className="cursor-pointer select-none px-4 py-3 hover:text-slate-200"
-                  >
-                    <div className="flex items-center gap-1">
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                      {header.column.getCanSort() && <ChevronsUpDown className="h-3 w-3" />}
-                    </div>
-                  </th>
+                  <Th key={header.id} cursor="pointer" userSelect="none" onClick={header.column.getToggleSortingHandler()}>
+                    <HStack spacing={1}>
+                      <Box>{flexRender(header.column.columnDef.header, header.getContext())}</Box>
+                      {header.column.getCanSort() && <ChevronsUpDown size={12} />}
+                    </HStack>
+                  </Th>
                 ))}
-              </tr>
+              </Tr>
             ))}
-          </thead>
-          <tbody className="divide-y divide-surface-border">
+          </Thead>
+          <Tbody>
             {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="hover:bg-slate-800/40">
+              <Tr key={row.id} _hover={{ bg: hoverBg }}>
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-3">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
+                  <Td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Td>
                 ))}
-              </tr>
+              </Tr>
             ))}
             {data.length === 0 && (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-8 text-center text-slate-500">
+              <Tr>
+                <Td colSpan={columns.length} textAlign="center" py={8} color="text.muted">
                   No CVEs match the current filters.
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             )}
-          </tbody>
-        </table>
-      </div>
+          </Tbody>
+        </Table>
+      </TableContainer>
 
-      <div className="flex items-center justify-between border-t border-surface-border px-4 py-3 text-sm text-slate-400">
-        <span>
+      <HStack justify="space-between" borderTopWidth="1px" borderColor="border.default" px={4} py={3} fontSize="sm">
+        <Text color="text.muted">
           Page {page} of {totalPages} · {total.toLocaleString()} results
-        </span>
-        <div className="flex gap-2">
-          <button
+        </Text>
+        <HStack spacing={2}>
+          <Button
+            size="sm"
+            variant="outline"
+            leftIcon={<ChevronLeft size={16} />}
             onClick={() => onPageChange(Math.max(1, page - 1))}
-            disabled={page <= 1}
-            className="flex items-center gap-1 rounded border border-surface-border px-2 py-1 disabled:opacity-40"
+            isDisabled={page <= 1}
           >
-            <ChevronLeft className="h-4 w-4" /> Prev
-          </button>
-          <button
+            Prev
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            rightIcon={<ChevronRight size={16} />}
             onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-            disabled={page >= totalPages}
-            className="flex items-center gap-1 rounded border border-surface-border px-2 py-1 disabled:opacity-40"
+            isDisabled={page >= totalPages}
           >
-            Next <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    </div>
+            Next
+          </Button>
+        </HStack>
+      </HStack>
+    </Box>
   );
 }

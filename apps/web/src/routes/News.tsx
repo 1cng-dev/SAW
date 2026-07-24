@@ -1,9 +1,24 @@
 import { useState } from "react";
+import { Button, Heading, SimpleGrid, Stack, Text, Wrap } from "@chakra-ui/react";
 import { NEWS_CATEGORIES, NEWS_FEEDS } from "@sec1cng/shared";
 import { useNews } from "../api/hooks";
 import { NewsCard } from "../components/news/NewsCard";
 import { ErrorState } from "../components/ui/ErrorState";
 import { SkeletonCard } from "../components/ui/Skeleton";
+
+function FilterChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <Button
+      size="xs"
+      borderRadius="full"
+      variant={active ? "solid" : "outline"}
+      colorScheme={active ? "blue" : "gray"}
+      onClick={onClick}
+    >
+      {label}
+    </Button>
+  );
+}
 
 export function NewsPage() {
   const [source, setSource] = useState<string | undefined>();
@@ -12,61 +27,41 @@ export function NewsPage() {
   const query = useNews({ source, category, pageSize: 30 });
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-lg font-semibold text-slate-100">Latest Security News</h1>
+    <Stack spacing={4}>
+      <Heading size="md">Latest Security News</Heading>
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setSource(undefined)}
-          className={`rounded-full border px-3 py-1 text-xs ${!source ? "border-blue-500 text-blue-400" : "border-surface-border text-slate-400"}`}
-        >
-          All Sources
-        </button>
+      <Wrap spacing={2}>
+        <FilterChip label="All Sources" active={!source} onClick={() => setSource(undefined)} />
         {NEWS_FEEDS.map((feed) => (
-          <button
-            key={feed.name}
-            onClick={() => setSource(feed.name)}
-            className={`rounded-full border px-3 py-1 text-xs ${source === feed.name ? "border-blue-500 text-blue-400" : "border-surface-border text-slate-400"}`}
-          >
-            {feed.name}
-          </button>
+          <FilterChip key={feed.name} label={feed.name} active={source === feed.name} onClick={() => setSource(feed.name)} />
         ))}
-      </div>
+      </Wrap>
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setCategory(undefined)}
-          className={`rounded-full border px-3 py-1 text-xs ${!category ? "border-blue-500 text-blue-400" : "border-surface-border text-slate-400"}`}
-        >
-          All Categories
-        </button>
+      <Wrap spacing={2}>
+        <FilterChip label="All Categories" active={!category} onClick={() => setCategory(undefined)} />
         {NEWS_CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setCategory(cat)}
-            className={`rounded-full border px-3 py-1 text-xs ${category === cat ? "border-blue-500 text-blue-400" : "border-surface-border text-slate-400"}`}
-          >
-            {cat}
-          </button>
+          <FilterChip key={cat} label={cat} active={category === cat} onClick={() => setCategory(cat)} />
         ))}
-      </div>
+      </Wrap>
 
       {query.isError && <ErrorState />}
       {query.isLoading ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
           {Array.from({ length: 6 }).map((_, i) => (
             <SkeletonCard key={i} />
           ))}
-        </div>
+        </SimpleGrid>
       ) : query.data && query.data.data.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
           {query.data.data.map((article) => (
             <NewsCard key={article.id} article={article} />
           ))}
-        </div>
+        </SimpleGrid>
       ) : (
-        <p className="text-sm text-slate-500">No news articles match this filter.</p>
+        <Text fontSize="sm" color="text.muted">
+          No news articles match this filter.
+        </Text>
       )}
-    </div>
+    </Stack>
   );
 }

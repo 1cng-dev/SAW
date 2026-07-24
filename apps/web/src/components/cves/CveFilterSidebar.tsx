@@ -1,5 +1,18 @@
 import { useForm } from "@tanstack/react-form";
 import { useEffect } from "react";
+import {
+  Box,
+  Checkbox,
+  Heading,
+  Input,
+  RangeSlider,
+  RangeSliderFilledTrack,
+  RangeSliderThumb,
+  RangeSliderTrack,
+  Stack,
+  Switch,
+  Text,
+} from "@chakra-ui/react";
 import { SEVERITIES } from "@sec1cng/shared";
 import type { CveFilters } from "../../api/hooks";
 
@@ -50,136 +63,144 @@ export function CveFilterSidebar({ onChange }: { onChange: (filters: Partial<Cve
   }, []);
 
   return (
-    <aside className="w-full shrink-0 space-y-6 rounded-lg border border-surface-border bg-surface-raised p-4 md:w-64">
-      <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Severity</h3>
-        <form.Field name="severity" mode="array">
-          {(field) => (
-            <div className="space-y-1.5">
-              {SEVERITIES.filter((s) => s !== "unknown").map((severity) => (
-                <label key={severity} className="flex items-center gap-2 text-sm text-slate-300">
-                  <input
-                    type="checkbox"
-                    checked={field.state.value.includes(severity)}
+    <Box
+      as="aside"
+      w="full"
+      minW={{ md: "260px" }}
+      maxW={{ md: "260px" }}
+      borderWidth={{ base: 0, md: "1px" }}
+      borderColor="border.default"
+      bg={{ base: "transparent", md: "bg.surface" }}
+      borderRadius="xl"
+      p={{ base: 0, md: 4 }}
+    >
+      <Stack spacing={6}>
+        <Box>
+          <Heading size="xs" textTransform="uppercase" letterSpacing="wide" color="text.muted" mb={2}>
+            Severity
+          </Heading>
+          <form.Field name="severity" mode="array">
+            {(field) => (
+              <Stack spacing={1.5}>
+                {SEVERITIES.filter((s) => s !== "unknown").map((severity) => (
+                  <Checkbox
+                    key={severity}
+                    isChecked={field.state.value.includes(severity)}
                     onChange={(e) => {
                       if (e.target.checked) field.pushValue(severity);
                       else field.removeValue(field.state.value.indexOf(severity));
                     }}
-                    className="rounded border-surface-border bg-surface accent-blue-600"
-                  />
-                  <span className="capitalize">{severity}</span>
-                </label>
-              ))}
-            </div>
-          )}
-        </form.Field>
-      </div>
-
-      <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Date range</h3>
-        <div className="space-y-2">
-          <form.Field name="dateFrom">
-            {(field) => (
-              <input
-                type="date"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                className="w-full rounded border border-surface-border bg-surface px-2 py-1 text-sm text-slate-200"
-              />
+                  >
+                    <Text textTransform="capitalize" fontSize="sm">
+                      {severity}
+                    </Text>
+                  </Checkbox>
+                ))}
+              </Stack>
             )}
           </form.Field>
-          <form.Field name="dateTo">
-            {(field) => (
-              <input
-                type="date"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                className="w-full rounded border border-surface-border bg-surface px-2 py-1 text-sm text-slate-200"
-              />
-            )}
-          </form.Field>
-        </div>
-      </div>
+        </Box>
 
-      <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Vendor</h3>
-        <form.Field name="vendor">
-          {(field) => (
-            <input
-              type="text"
-              placeholder="e.g. cisco"
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-              className="w-full rounded border border-surface-border bg-surface px-2 py-1 text-sm text-slate-200"
-            />
-          )}
-        </form.Field>
-      </div>
-
-      <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">CVSS range</h3>
-        <form.Field name="minCvss">
-          {(minField) => (
-            <form.Field name="maxCvss">
-              {(maxField) => (
-                <div className="space-y-2 text-sm text-slate-300">
-                  <div className="flex justify-between text-xs text-slate-500">
-                    <span>{minField.state.value.toFixed(1)}</span>
-                    <span>{maxField.state.value.toFixed(1)}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    value={minField.state.value}
-                    onChange={(e) => minField.handleChange(Math.min(Number(e.target.value), maxField.state.value))}
-                    className="w-full accent-blue-600"
-                  />
-                  <input
-                    type="range"
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    value={maxField.state.value}
-                    onChange={(e) => maxField.handleChange(Math.max(Number(e.target.value), minField.state.value))}
-                    className="w-full accent-blue-600"
-                  />
-                </div>
+        <Box>
+          <Heading size="xs" textTransform="uppercase" letterSpacing="wide" color="text.muted" mb={2}>
+            Date range
+          </Heading>
+          <Stack spacing={2}>
+            <form.Field name="dateFrom">
+              {(field) => (
+                <Input
+                  size="sm"
+                  type="date"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
               )}
             </form.Field>
-          )}
-        </form.Field>
-      </div>
+            <form.Field name="dateTo">
+              {(field) => (
+                <Input
+                  size="sm"
+                  type="date"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+              )}
+            </form.Field>
+          </Stack>
+        </Box>
 
-      <div className="space-y-1.5">
-        <form.Field name="hasPoc">
-          {(field) => (
-            <label className="flex items-center gap-2 text-sm text-slate-300">
-              <input
-                type="checkbox"
-                checked={field.state.value}
-                onChange={(e) => field.handleChange(e.target.checked)}
-                className="rounded border-surface-border bg-surface accent-blue-600"
+        <Box>
+          <Heading size="xs" textTransform="uppercase" letterSpacing="wide" color="text.muted" mb={2}>
+            Vendor
+          </Heading>
+          <form.Field name="vendor">
+            {(field) => (
+              <Input
+                size="sm"
+                placeholder="e.g. cisco"
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
               />
-              Has PoC
-            </label>
-          )}
-        </form.Field>
-        <form.Field name="isExploited">
-          {(field) => (
-            <label className="flex items-center gap-2 text-sm text-slate-300">
-              <input
-                type="checkbox"
-                checked={field.state.value}
-                onChange={(e) => field.handleChange(e.target.checked)}
-                className="rounded border-surface-border bg-surface accent-blue-600"
-              />
-              Exploited in the wild
-            </label>
-          )}
-        </form.Field>
-      </div>
-    </aside>
+            )}
+          </form.Field>
+        </Box>
+
+        <Box>
+          <Heading size="xs" textTransform="uppercase" letterSpacing="wide" color="text.muted" mb={2}>
+            CVSS range
+          </Heading>
+          <form.Field name="minCvss">
+            {(minField) => (
+              <form.Field name="maxCvss">
+                {(maxField) => (
+                  <Stack spacing={2}>
+                    <Box display="flex" justifyContent="space-between" fontSize="xs" color="text.muted">
+                      <Text>{minField.state.value.toFixed(1)}</Text>
+                      <Text>{maxField.state.value.toFixed(1)}</Text>
+                    </Box>
+                    <RangeSlider
+                      min={0}
+                      max={10}
+                      step={0.1}
+                      value={[minField.state.value, maxField.state.value]}
+                      onChange={([min, max]) => {
+                        minField.handleChange(min);
+                        maxField.handleChange(max);
+                      }}
+                      colorScheme="blue"
+                    >
+                      <RangeSliderTrack>
+                        <RangeSliderFilledTrack />
+                      </RangeSliderTrack>
+                      <RangeSliderThumb index={0} />
+                      <RangeSliderThumb index={1} />
+                    </RangeSlider>
+                  </Stack>
+                )}
+              </form.Field>
+            )}
+          </form.Field>
+        </Box>
+
+        <Stack spacing={3}>
+          <form.Field name="hasPoc">
+            {(field) => (
+              <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Text fontSize="sm">Has PoC</Text>
+                <Switch isChecked={field.state.value} onChange={(e) => field.handleChange(e.target.checked)} />
+              </Box>
+            )}
+          </form.Field>
+          <form.Field name="isExploited">
+            {(field) => (
+              <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Text fontSize="sm">Exploited in the wild</Text>
+                <Switch isChecked={field.state.value} onChange={(e) => field.handleChange(e.target.checked)} />
+              </Box>
+            )}
+          </form.Field>
+        </Stack>
+      </Stack>
+    </Box>
   );
 }

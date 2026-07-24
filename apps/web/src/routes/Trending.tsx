@@ -1,70 +1,91 @@
+import { Link } from "@tanstack/react-router";
+import { Box, Heading, HStack, SimpleGrid, Skeleton, Stack, Text, useColorModeValue } from "@chakra-ui/react";
 import { useDisclosureTrend, useStats, useTrendingCves } from "../api/hooks";
 import { TrendLineChart } from "../components/charts/TrendLineChart";
 import { SeverityDonut } from "../components/charts/SeverityDonut";
 import { SeverityBadge } from "../components/cves/SeverityBadge";
 import { ErrorState } from "../components/ui/ErrorState";
 import { SkeletonCard } from "../components/ui/Skeleton";
-import { Link } from "@tanstack/react-router";
 
 export function TrendingPage() {
   const trend = useDisclosureTrend();
   const stats = useStats();
   const trending = useTrendingCves(20);
+  const hoverBg = useColorModeValue("gray.50", "whiteAlpha.50");
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-lg font-semibold text-slate-100">Trending</h1>
+    <Stack spacing={6}>
+      <Heading size="md">Trending</Heading>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-lg border border-surface-border bg-surface-raised p-4">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
+        <Box borderWidth="1px" borderColor="border.default" bg="bg.surface" borderRadius="xl" p={4}>
+          <Heading size="xs" textTransform="uppercase" letterSpacing="wide" color="text.muted" mb={2}>
             30-Day Disclosure Trend
-          </h3>
+          </Heading>
           {trend.isError && <ErrorState />}
           {trend.isLoading ? (
-            <div className="h-64 skeleton rounded bg-slate-700/30" />
+            <Skeleton height="256px" borderRadius="md" />
           ) : (
             <TrendLineChart data={trend.data?.data.map((d) => ({ date: d.date.slice(5), count: d.count })) ?? []} />
           )}
-        </div>
+        </Box>
 
-        <div className="rounded-lg border border-surface-border bg-surface-raised p-4">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Severity Distribution</h3>
+        <Box borderWidth="1px" borderColor="border.default" bg="bg.surface" borderRadius="xl" p={4}>
+          <Heading size="xs" textTransform="uppercase" letterSpacing="wide" color="text.muted" mb={2}>
+            Severity Distribution
+          </Heading>
           {stats.isError && <ErrorState />}
           {stats.isLoading ? (
-            <div className="h-56 skeleton rounded bg-slate-700/30" />
+            <Skeleton height="224px" borderRadius="md" />
           ) : (
             <SeverityDonut breakdown={stats.data?.severityBreakdown ?? {}} />
           )}
-        </div>
-      </div>
+        </Box>
+      </SimpleGrid>
 
-      <div>
-        <h3 className="mb-3 text-lg font-semibold text-slate-100">Ranked Trending CVEs</h3>
+      <Box>
+        <Heading size="md" mb={3}>
+          Ranked Trending CVEs
+        </Heading>
         {trending.isError && <ErrorState />}
         {trending.isLoading ? (
-          <div className="space-y-2">
+          <Stack spacing={2}>
             {Array.from({ length: 5 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
-          </div>
+          </Stack>
         ) : trending.data && trending.data.data.length > 0 ? (
-          <ol className="divide-y divide-surface-border rounded-lg border border-surface-border bg-surface-raised">
+          <Stack
+            spacing={0}
+            borderWidth="1px"
+            borderColor="border.default"
+            bg="bg.surface"
+            borderRadius="xl"
+            divider={<Box borderBottomWidth="1px" borderColor="border.default" />}
+          >
             {trending.data.data.map((cve, i) => (
-              <li key={cve.id}>
-                <Link to="/cves/$cveId" params={{ cveId: cve.id }} className="flex items-center gap-4 px-4 py-3 hover:bg-slate-800/40">
-                  <span className="w-6 text-center text-sm font-semibold text-slate-500">{i + 1}</span>
-                  <span className="font-mono-cve text-sm text-slate-200">{cve.id}</span>
+              <Link key={cve.id} to="/cves/$cveId" params={{ cveId: cve.id }}>
+                <HStack px={4} py={3} spacing={4} _hover={{ bg: hoverBg }}>
+                  <Text w={6} textAlign="center" fontSize="sm" fontWeight="semibold" color="text.muted">
+                    {i + 1}
+                  </Text>
+                  <Text fontFamily="mono" fontSize="sm">
+                    {cve.id}
+                  </Text>
                   <SeverityBadge severity={cve.severity} />
-                  <span className="ml-auto font-mono-cve text-xs text-slate-500">score {Number(cve.trendingScore).toFixed(1)}</span>
-                </Link>
-              </li>
+                  <Text ml="auto" fontFamily="mono" fontSize="xs" color="text.muted">
+                    score {Number(cve.trendingScore).toFixed(1)}
+                  </Text>
+                </HStack>
+              </Link>
             ))}
-          </ol>
+          </Stack>
         ) : (
-          <p className="text-sm text-slate-500">Trending scores haven't been calculated yet.</p>
+          <Text fontSize="sm" color="text.muted">
+            Trending scores haven't been calculated yet.
+          </Text>
         )}
-      </div>
-    </div>
+      </Box>
+    </Stack>
   );
 }

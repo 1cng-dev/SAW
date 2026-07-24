@@ -77,10 +77,31 @@ export function useVendorCves(vendorName: string | undefined, page = 1, pageSize
   });
 }
 
-export function useDisclosureTrend() {
+export function useDisclosureTrend(days = 30) {
   return useQuery({
-    queryKey: ["disclosure-trend"],
-    queryFn: () => apiFetch<{ data: Array<{ date: string; count: number }> }>("/api/stats/disclosure-trend"),
+    queryKey: ["disclosure-trend", days],
+    queryFn: () => apiFetch<{ data: Array<{ date: string; count: number }> }>("/api/stats/disclosure-trend", { days }),
+  });
+}
+
+export function useSeverityTrend(days = 30) {
+  return useQuery({
+    queryKey: ["severity-trend", days],
+    queryFn: () => apiFetch<{ data: Array<{ date: string; critical: number; high: number; medium: number; low: number }> }>("/api/stats/severity-trend", { days }),
+  });
+}
+
+export function useNewsVolumeTrend(days = 30) {
+  return useQuery({
+    queryKey: ["news-volume-trend", days],
+    queryFn: () => apiFetch<{ data: Array<{ date: string; source: string; count: number }> }>("/api/stats/news-volume-trend", { days }),
+  });
+}
+
+export function useStatTrend(statType: string, days = 7) {
+  return useQuery({
+    queryKey: ["stat-trend", statType, days],
+    queryFn: () => apiFetch<{ data: Array<{ date: string; count: number }> }>("/api/stats/stat-trend", { statType, days }),
   });
 }
 
