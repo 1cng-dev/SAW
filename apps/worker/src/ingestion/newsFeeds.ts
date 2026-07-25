@@ -1,5 +1,5 @@
 import Parser from "rss-parser";
-import { newsArticles, type Db, type NewNewsArticle } from "@sec1cng/db";
+import { newsArticles, ransomwareGroups, type Db, type NewNewsArticle } from "@sec1cng/db";
 import { CATEGORY_KEYWORDS, CVE_ID_REGEX, EXCERPT_MAX_LENGTH, NEWS_FEEDS, NEWS_CATEGORIES } from "@sec1cng/shared";
 import { logger } from "../lib/logger";
 import { withRetry } from "../lib/retry";
@@ -29,6 +29,29 @@ function truncateExcerpt(text: string | undefined): string | null {
   return `${stripped.slice(0, EXCERPT_MAX_LENGTH - 1)}…`;
 }
 
+interface GroupMatcher {
+  name: string;
+  regex: RegExp;
+}
+
+/** Whole-word, case-insensitive matchers for known ransomware group names (>= 4 chars to cut noise). */
+function buildGroupMatchers(groupNames: string[]): GroupMatcher[] {
+  return groupNames
+    .filter((name) => name.trim().length >= 4)
+    .map((name) => ({
+      name,
+      regex: new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i"),
+    }));
+}
+
+function extractRansomwareGroups(text: string, matchers: GroupMatcher[]): string[] {
+  const matches = new Set<string>();
+  for (const { name, regex } of matchers) {
+    if (regex.test(text)) matches.add(name);
+  }
+  return Array.from(matches);
+}
+
 export interface FeedIngestionResult {
   recordsFetched: number;
   recordsInserted: number;
@@ -36,7 +59,12 @@ export interface FeedIngestionResult {
   errors: string[];
 }
 
-async function ingestOneFeed(db: Db, feedName: string, feedUrl: string): Promise<FeedIngestionResult> {
+async function ingestOneFeed(
+  db: Db,
+  feedName: string,
+  feedUrl: string,
+  groupMatchers: GroupMatcher[],
+): Promise<FeedIngestionResult> {
   const errors: string[] = [];
   let recordsFetched = 0;
   let recordsInserted = 0;
@@ -62,6 +90,7 @@ async function ingestOneFeed(db: Db, feedName: string, feedUrl: string): Promise
           category: inferCategory(title),
           publishedDate: item.isoDate ? new Date(item.isoDate) : item.pubDate ? new Date(item.pubDate) : null,
           relatedCveIds: extractCveIds(combinedText),
+          relatedRansomwareGroups: extractRansomwareGroups(combinedText, groupMatchers),
         };
       });
 
@@ -90,9 +119,12 @@ export async function runNewsIngestion(db: Db): Promise<FeedIngestionResult> {
     let recordsInserted = 0;
     const errors: string[] = [];
 
+    const knownGroups = await db.select({ name: ransomwareGroups.name }).from(ransomwareGroups);
+    const groupMatchers = buildGroupMatchers(knownGroups.map((g) => g.name));
+
     for (const feed of NEWS_FEEDS) {
       logger.info({ feed: feed.name, url: feed.url }, "[news] fetching feed");
-      const result = await ingestOneFeed(db, feed.name, feed.url);
+      const result = await ingestOneFeed(db, feed.name, feed.url, groupMatchers);
       recordsFetched += result.recordsFetched;
       recordsInserted += result.recordsInserted;
       errors.push(...result.errors);

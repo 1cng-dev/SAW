@@ -1,6 +1,6 @@
-import { ilike, or } from "drizzle-orm";
+import { eq, ilike, or } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
-import { cves, newsArticles } from "@sec1cng/db";
+import { cves, newsArticles, ransomwareIocs } from "@sec1cng/db";
 
 export function registerThreatIntelRoutes(app: FastifyInstance) {
   app.get("/api/threat-intel/lookup", async (request, reply) => {
@@ -51,15 +51,35 @@ export function registerThreatIntelRoutes(app: FastifyInstance) {
       )
       .limit(20);
 
+    // Cross-reference against real IOC data synced from ransomware.live
+    // (hashes, IPs, wallet addresses, etc. observed across ~80 tracked groups)
+    const ransomwareIocMatches = await app.db
+      .select({
+        groupName: ransomwareIocs.groupName,
+        iocType: ransomwareIocs.iocType,
+        iocValue: ransomwareIocs.iocValue,
+      })
+      .from(ransomwareIocs)
+      .where(eq(ransomwareIocs.iocValue, searchTerm.toLowerCase()))
+      .limit(20);
+
     // Determine verdict based on matches
     let verdict = "unknown";
     let confidence = "low";
     let sources: string[] = [];
 
-    if (cveMatches.length > 0 || newsMatches.length > 0) {
+    if (ransomwareIocMatches.length > 0) {
+      verdict = "malicious";
+      confidence = "high";
+      sources = ransomwareIocMatches.map((m) => `Ransomware.live: ${m.groupName} (${m.iocType})`);
+    }
+
+    // Only let CVE/news matches set the verdict if the (higher-confidence)
+    // ransomware IOC check above didn't already flag this indicator.
+    if (ransomwareIocMatches.length === 0 && (cveMatches.length > 0 || newsMatches.length > 0)) {
       // Check if any critical/high CVEs mention this indicator
       const criticalMatches = cveMatches.filter((cve) => cve.severity === "critical" || cve.severity === "high");
-      
+
       if (criticalMatches.length > 0) {
         verdict = "malicious";
         confidence = "high";
@@ -103,17 +123,25 @@ export function registerThreatIntelRoutes(app: FastifyInstance) {
           }
         }
       } catch (error) {
-        console.error("AbuseIPDB API error:", error);
+        app.log.error({ error: String(error) }, "AbuseIPDB API error");
       }
     }
 
-    // VirusTotal integration
-    if (process.env.VIRUSTOTAL_API_KEY && isHash) {
+    // VirusTotal integration — covers all four indicator types via VT's real
+    // v3 endpoints (files by hash, ip_addresses, domains, and urls by their
+    // base64url-encoded id, per https://docs.virustotal.com/reference).
+    if (process.env.VIRUSTOTAL_API_KEY && (isHash || isIP || isDomain || isURL)) {
+      const vtPath = isHash
+        ? `files/${searchTerm}`
+        : isIP
+          ? `ip_addresses/${searchTerm}`
+          : isDomain
+            ? `domains/${searchTerm}`
+            : `urls/${Buffer.from(searchTerm).toString("base64url").replace(/=+$/, "")}`;
+
       try {
-        const response = await fetch(`https://www.virustotal.com/api/v3/files/${searchTerm}`, {
-          headers: {
-            "x-apikey": process.env.VIRUSTOTAL_API_KEY,
-          },
+        const response = await fetch(`https://www.virustotal.com/api/v3/${vtPath}`, {
+          headers: { "x-apikey": process.env.VIRUSTOTAL_API_KEY },
         });
         if (response.ok) {
           const data = await response.json();
@@ -122,17 +150,21 @@ export function registerThreatIntelRoutes(app: FastifyInstance) {
             data: data.data,
           });
           // Update verdict based on VirusTotal
-          const maliciousCount = data.data?.attributes?.last_analysis_stats?.malicious || 0;
+          const stats = data.data?.attributes?.last_analysis_stats;
+          const maliciousCount = stats?.malicious || 0;
+          const suspiciousCount = stats?.suspicious || 0;
           if (maliciousCount > 5) {
             verdict = "malicious";
             confidence = "high";
-          } else if (maliciousCount > 0) {
+          } else if (maliciousCount > 0 || suspiciousCount > 0) {
             verdict = "suspicious";
             confidence = "medium";
           }
+        } else if (response.status !== 404) {
+          app.log.warn({ status: response.status, vtPath }, "VirusTotal lookup failed");
         }
       } catch (error) {
-        console.error("VirusTotal API error:", error);
+        app.log.error({ error: String(error) }, "VirusTotal API error");
       }
     }
 
@@ -144,6 +176,7 @@ export function registerThreatIntelRoutes(app: FastifyInstance) {
       sources,
       cveMatches,
       newsMatches,
+      ransomwareIocMatches,
       externalResults,
       hasExternalAPI: !!(process.env.ABUSEIPDB_API_KEY || process.env.VIRUSTOTAL_API_KEY),
     });

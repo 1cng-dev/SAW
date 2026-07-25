@@ -1,7 +1,22 @@
 import type { FastifyInstance } from "fastify";
 import { desc, eq, gte, sql, count } from "drizzle-orm";
 import { ransomwareGroups, ransomwareVictims } from "@sec1cng/db";
-import { syncRansomwareData } from "../lib/ransomwareSync";
+import {
+  syncRansomwareData,
+  ransomwareApiHeaders,
+  isRansomwareApiConfigured,
+  RANSOMWARE_LIVE_API_URL,
+} from "../lib/ransomwareSync";
+
+const ATTACK_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // refresh cached ATT&CK data once a day
+
+async function fetchRansomwareLive(path: string) {
+  const response = await fetch(`${RANSOMWARE_LIVE_API_URL}${path}`, { headers: ransomwareApiHeaders() });
+  if (!response.ok) {
+    throw new Error(`Ransomware.live API error (${path}): ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
 
 export function registerRansomwareRoutes(app: FastifyInstance) {
   // Trigger sync from Ransomware.live API
@@ -151,6 +166,118 @@ export function registerRansomwareRoutes(app: FastifyInstance) {
     } catch (error) {
       app.log.error({ error: String(error) }, 'Failed to fetch ransomware trends from database');
       return reply.send({ data: [] });
+    }
+  });
+
+  // MITRE ATT&CK tactic/technique matrix for a group — fetched live from
+  // ransomware.live's /group/{name} endpoint, cached in ransomware_groups
+  // and refreshed once the cache is older than a day.
+  app.get("/api/ransomware/groups/:slug/attack", async (request, reply) => {
+    const { slug } = request.params as { slug: string };
+
+    const [group] = await app.db.select().from(ransomwareGroups).where(eq(ransomwareGroups.slug, slug));
+    if (!group) return reply.status(404).send({ error: "Unknown group" });
+
+    const isStale = !group.attackSyncedAt || Date.now() - group.attackSyncedAt.getTime() > ATTACK_CACHE_MAX_AGE_MS;
+
+    if (!isStale && group.attackTechniques) {
+      return reply.send({ group: group.name, ttps: group.attackTechniques, cached: true });
+    }
+
+    if (!isRansomwareApiConfigured()) {
+      // No key: serve whatever's cached (possibly stale), or empty.
+      return reply.send({ group: group.name, ttps: group.attackTechniques ?? [], cached: true });
+    }
+
+    try {
+      const detail = (await fetchRansomwareLive(`/group/${encodeURIComponent(group.name)}`)) as {
+        ttps?: unknown;
+        description?: string;
+      };
+
+      await app.db
+        .update(ransomwareGroups)
+        .set({ attackTechniques: detail.ttps ?? [], attackSyncedAt: new Date(), updatedAt: new Date() })
+        .where(eq(ransomwareGroups.slug, slug));
+
+      return reply.send({ group: group.name, ttps: detail.ttps ?? [], cached: false });
+    } catch (error) {
+      app.log.error({ error: String(error), slug }, "Failed to fetch ATT&CK data, serving cache if any");
+      return reply.send({ group: group.name, ttps: group.attackTechniques ?? [], cached: true, stale: true });
+    }
+  });
+
+  // Real ransom note names for a group (live, ransomware.live /ransomnotes/{group})
+  app.get("/api/ransomware/groups/:slug/notes", async (request, reply) => {
+    const { slug } = request.params as { slug: string };
+    if (!isRansomwareApiConfigured()) return reply.send({ data: [], configured: false });
+
+    const [group] = await app.db.select().from(ransomwareGroups).where(eq(ransomwareGroups.slug, slug));
+    if (!group) return reply.status(404).send({ error: "Unknown group" });
+
+    try {
+      const data = (await fetchRansomwareLive(`/ransomnotes/${encodeURIComponent(group.name)}`)) as {
+        ransomnotes?: string[];
+      };
+      return reply.send({ data: data.ransomnotes ?? [], configured: true });
+    } catch (error) {
+      app.log.error({ error: String(error), slug }, "Failed to fetch ransom notes list");
+      return reply.send({ data: [], configured: true });
+    }
+  });
+
+  // Real ransom note content
+  app.get("/api/ransomware/groups/:slug/notes/:noteName", async (request, reply) => {
+    const { slug, noteName } = request.params as { slug: string; noteName: string };
+
+    const [group] = await app.db.select().from(ransomwareGroups).where(eq(ransomwareGroups.slug, slug));
+    if (!group) return reply.status(404).send({ error: "Unknown group" });
+
+    try {
+      const data = await fetchRansomwareLive(
+        `/ransomnotes/${encodeURIComponent(group.name)}/${encodeURIComponent(noteName)}`,
+      );
+      return reply.send(data);
+    } catch (error) {
+      app.log.error({ error: String(error), slug, noteName }, "Failed to fetch ransom note content");
+      return reply.status(502).send({ error: "Failed to fetch ransom note from ransomware.live" });
+    }
+  });
+
+  // Real negotiation chat list for a group (live, /negotiations/{group})
+  app.get("/api/ransomware/groups/:slug/negotiations", async (request, reply) => {
+    const { slug } = request.params as { slug: string };
+    if (!isRansomwareApiConfigured()) return reply.send({ data: [], configured: false });
+
+    const [group] = await app.db.select().from(ransomwareGroups).where(eq(ransomwareGroups.slug, slug));
+    if (!group) return reply.status(404).send({ error: "Unknown group" });
+
+    try {
+      const data = (await fetchRansomwareLive(`/negotiations/${encodeURIComponent(group.name)}`)) as {
+        chats?: unknown[];
+      };
+      return reply.send({ data: data.chats ?? [], configured: true });
+    } catch (error) {
+      app.log.error({ error: String(error), slug }, "Failed to fetch negotiation chat list");
+      return reply.send({ data: [], configured: true });
+    }
+  });
+
+  // Real negotiation chat transcript
+  app.get("/api/ransomware/groups/:slug/negotiations/:chatId", async (request, reply) => {
+    const { slug, chatId } = request.params as { slug: string; chatId: string };
+
+    const [group] = await app.db.select().from(ransomwareGroups).where(eq(ransomwareGroups.slug, slug));
+    if (!group) return reply.status(404).send({ error: "Unknown group" });
+
+    try {
+      const data = await fetchRansomwareLive(
+        `/negotiations/${encodeURIComponent(group.name)}/${encodeURIComponent(chatId)}`,
+      );
+      return reply.send(data);
+    } catch (error) {
+      app.log.error({ error: String(error), slug, chatId }, "Failed to fetch negotiation transcript");
+      return reply.status(502).send({ error: "Failed to fetch negotiation transcript from ransomware.live" });
     }
   });
 }

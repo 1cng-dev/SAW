@@ -1,0 +1,1 @@
+ALTER TABLE "news_articles" ADD COLUMN "related_ransomware_groups" jsonb DEFAULT '[]'::jsonb NOT NULL;

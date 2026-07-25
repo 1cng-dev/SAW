@@ -36,6 +36,7 @@ export interface NewsArticle {
   category: string | null;
   publishedDate: string | null;
   relatedCveIds: string[];
+  relatedRansomwareGroups: string[];
   fetchedAt: string;
 }
 

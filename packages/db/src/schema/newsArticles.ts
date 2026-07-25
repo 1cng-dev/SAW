@@ -9,6 +9,9 @@ export const newsArticles = pgTable("news_articles", {
   category: text("category"), // Ransomware | Data Breach | Malware | Vulnerability | APT | Phishing | Other
   publishedDate: timestamp("published_date", { withTimezone: true }),
   relatedCveIds: jsonb("related_cve_ids").notNull().default([]),
+  // Known ransomware group names (from ransomware_groups) mentioned in
+  // title/excerpt, detected at ingestion time — same pattern as relatedCveIds.
+  relatedRansomwareGroups: jsonb("related_ransomware_groups").notNull().default([]),
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

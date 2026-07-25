@@ -15,6 +15,20 @@
       "when": 1784933913877,
       "tag": "0001_talented_stellaris",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784935756217,
+      "tag": "0002_lazy_polaris",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784936687628,
+      "tag": "0003_uneven_maria_hill",
+      "breakpoints": true
     }
   ]
 }

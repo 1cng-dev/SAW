@@ -1,5 +1,6 @@
+import { Link } from "@tanstack/react-router";
 import { Box, HStack, LinkBox, LinkOverlay, Tag, Text, Wrap } from "@chakra-ui/react";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Skull } from "lucide-react";
 import type { NewsArticle } from "../../api/types";
 
 export function NewsCard({ article }: { article: NewsArticle }) {
@@ -35,12 +36,22 @@ export function NewsCard({ article }: { article: NewsArticle }) {
           {article.excerpt}
         </Text>
       )}
-      {article.relatedCveIds.length > 0 && (
+      {(article.relatedCveIds.length > 0 || article.relatedRansomwareGroups.length > 0) && (
         <Wrap mt={2} spacing={1}>
           {article.relatedCveIds.map((id) => (
             <Tag key={id} size="sm" fontFamily="mono" fontSize="10px" variant="subtle">
               {id}
             </Tag>
+          ))}
+          {article.relatedRansomwareGroups.map((group) => (
+            <Link key={group} to="/ransomware-tracker">
+              <Tag size="sm" fontSize="10px" variant="subtle" colorScheme="red">
+                <HStack spacing={1}>
+                  <Skull size={10} />
+                  <Text as="span">{group}</Text>
+                </HStack>
+              </Tag>
+            </Link>
           ))}
         </Wrap>
       )}

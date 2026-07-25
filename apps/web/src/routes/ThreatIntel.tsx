@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Box, Heading, Text, Input, Button, VStack, HStack, Badge, SimpleGrid, Alert, AlertIcon, AlertTitle, AlertDescription, Code, Link } from "@chakra-ui/react";
 import { Search, Shield, AlertTriangle, CheckCircle, HelpCircle, ExternalLink } from "lucide-react";
 import { useThreatIntelLookup } from "../api/hooks";
+import { ExternalApiResultTable } from "../components/threatintel/ExternalApiResultTable";
 
 export function ThreatIntelPage() {
   const [indicator, setIndicator] = useState("");
@@ -175,13 +176,11 @@ export function ThreatIntelPage() {
               <VStack spacing={3} align="stretch">
                 {data.externalResults.map((result: any, idx: number) => (
                   <Box key={idx} p={4} borderWidth="1px" borderColor="border.default" borderRadius="md" bg="charcoal.800">
-                    <HStack spacing={2} mb={2}>
+                    <HStack spacing={2} mb={3}>
                       <Shield size={16} color="accent.400" />
                       <Text fontSize="sm" fontWeight="medium">{result.source}</Text>
                     </HStack>
-                    <Code fontSize="xs" color="text.muted" display="block" whiteSpace="pre-wrap">
-                      {JSON.stringify(result.data, null, 2)}
-                    </Code>
+                    <ExternalApiResultTable source={result.source} data={result.data ?? {}} />
                   </Box>
                 ))}
               </VStack>

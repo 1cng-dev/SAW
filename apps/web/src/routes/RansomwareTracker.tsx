@@ -1,14 +1,22 @@
 import { useState } from "react";
-import { Box, Heading, Text, VStack, HStack, SimpleGrid, Badge, Input, Select, Alert, AlertIcon, AlertTitle, AlertDescription, Table, Thead, Tbody, Tr, Th, Td, Link, Code, Skeleton, Stack } from "@chakra-ui/react";
-import { Skull, TrendingUp, ExternalLink, AlertTriangle, Search, Calendar, Activity, Clock } from "lucide-react";
+import { Box, Heading, Text, VStack, HStack, SimpleGrid, Badge, Input, Select, Alert, AlertIcon, AlertTitle, AlertDescription, Table, Thead, Tbody, Tr, Th, Td, Link, Code, Skeleton, Stack, Button, useDisclosure } from "@chakra-ui/react";
+import { Skull, TrendingUp, ExternalLink, AlertTriangle, Search, Calendar, Activity, Clock, ShieldAlert } from "lucide-react";
 import { useNews, useRansomwareGroups, useRansomwareVictims, useRansomwareStats, useRansomwareTrends } from "../api/hooks";
 import { TrendLineChart } from "../components/charts/TrendLineChart";
 import { LiveIndicator } from "../components/ui/LiveIndicator";
+import { GroupDetailModal } from "../components/ransomware/GroupDetailModal";
 
 export function RansomwareTrackerPage() {
   const [selectedGroup, setSelectedGroup] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [timeRange, setTimeRange] = useState("30d");
+  const [detailGroup, setDetailGroup] = useState<{ slug: string; name: string } | null>(null);
+  const { isOpen: isDetailOpen, onOpen: onOpenDetail, onClose: onCloseDetail } = useDisclosure();
+
+  function openGroupDetail(slug: string, name: string) {
+    setDetailGroup({ slug, name });
+    onOpenDetail();
+  }
 
   // Fetch ransomware data from API
   const groups = useRansomwareGroups();
@@ -71,11 +79,36 @@ export function RansomwareTrackerPage() {
         <Box>
           <AlertTitle>Real-time API Integration</AlertTitle>
           <AlertDescription>
-            This tracker uses the <Code fontSize="xs">Ransomware.live API</Code> for real-time threat intelligence. 
-            API Key: <Code fontSize="xs">be0ace70-30ff-4158-9a58-567ad29ddaf6</Code>
+            This tracker uses the <Code fontSize="xs">Ransomware.live</Code> Pro API for real-time threat
+            intelligence (groups, victims, IOCs, ATT&CK mapping, ransom notes, negotiation chats).
           </AlertDescription>
         </Box>
       </Alert>
+
+      {/* Featured example: Akira — real ATT&CK mapping, ransom notes, and leaked negotiation chats */}
+      <Box
+        mb={8}
+        p={4}
+        borderWidth="1px"
+        borderColor="severity.critical.500"
+        borderRadius="xl"
+        bg="charcoal.800"
+      >
+        <HStack justify="space-between" wrap="wrap" spacing={3}>
+          <HStack spacing={3}>
+            <Skull size={22} color="#dc2626" />
+            <Box>
+              <Text fontWeight="semibold">Featured: Akira</Text>
+              <Text fontSize="sm" color="text.muted">
+                Real ATT&CK technique mapping, leaked ransom notes, and negotiation chat transcripts.
+              </Text>
+            </Box>
+          </HStack>
+          <Button size="sm" onClick={() => openGroupDetail("akira", "akira")}>
+            View Akira Details
+          </Button>
+        </HStack>
+      </Box>
 
       {/* Trend Chart */}
       <Box mb={8}>
@@ -133,11 +166,24 @@ export function RansomwareTrackerPage() {
                       {group.description}
                     </Text>
                   )}
-                  <HStack spacing={1} mt={2}>
-                    <TrendingUp size={14} color="accent.400" />
-                    <Text fontSize="xs" color="text.muted" fontFamily="mono">
-                      {group.victims || 0} victims
-                    </Text>
+                  <HStack justify="space-between" mt={2}>
+                    <HStack spacing={1}>
+                      <TrendingUp size={14} color="accent.400" />
+                      <Text fontSize="xs" color="text.muted" fontFamily="mono">
+                        {group.victims || 0} victims
+                      </Text>
+                    </HStack>
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      leftIcon={<ShieldAlert size={12} />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openGroupDetail(group.slug, group.name);
+                      }}
+                    >
+                      Details
+                    </Button>
                   </HStack>
                 </Box>
               ))}
@@ -263,6 +309,15 @@ export function RansomwareTrackerPage() {
           )}
         </Box>
       </VStack>
+
+      {detailGroup && (
+        <GroupDetailModal
+          isOpen={isDetailOpen}
+          onClose={onCloseDetail}
+          slug={detailGroup.slug}
+          groupName={detailGroup.name}
+        />
+      )}
     </Box>
   );
 }

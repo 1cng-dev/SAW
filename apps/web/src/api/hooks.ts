@@ -32,6 +32,7 @@ export function useCves(filters: CveFilters) {
     queryKey: ["cves", filters],
     queryFn: () => apiFetch<Paginated<Cve>>("/api/cves", filters as Record<string, string | number | boolean | undefined>),
     placeholderData: (prev) => prev,
+    refetchInterval: 60_000,
   });
 }
 
@@ -55,6 +56,7 @@ export function useNews(filters: { source?: string; category?: string; page?: nu
     queryKey: ["news", filters],
     queryFn: () => apiFetch<Paginated<NewsArticle>>("/api/news", filters),
     placeholderData: (prev) => prev,
+    refetchInterval: 60_000,
   });
 }
 
@@ -158,5 +160,82 @@ export function useRansomwareTrends(days = 30) {
     queryKey: ["ransomware-trends", days],
     queryFn: () => apiFetch<{ data: Array<{ date: string; victims: number; groups: number }> }>("/api/ransomware/trends"),
     refetchInterval: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+export interface AttackTechnique {
+  technique_name: string;
+  technique_id: string;
+  technique_details: string;
+}
+
+export interface AttackTactic {
+  tactic_name: string;
+  tactic_id: string;
+  techniques: AttackTechnique[];
+}
+
+export function useRansomwareAttack(slug: string | undefined) {
+  return useQuery({
+    queryKey: ["ransomware-attack", slug],
+    queryFn: () => apiFetch<{ group: string; ttps: AttackTactic[]; cached: boolean }>(`/api/ransomware/groups/${slug}/attack`),
+    enabled: Boolean(slug),
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
+export function useRansomwareNotes(slug: string | undefined) {
+  return useQuery({
+    queryKey: ["ransomware-notes", slug],
+    queryFn: () => apiFetch<{ data: string[]; configured: boolean }>(`/api/ransomware/groups/${slug}/notes`),
+    enabled: Boolean(slug),
+  });
+}
+
+export function useRansomwareNoteContent(slug: string | undefined, noteName: string | undefined) {
+  return useQuery({
+    queryKey: ["ransomware-note", slug, noteName],
+    queryFn: () =>
+      apiFetch<{ note_name: string; extension: string; content: string }>(
+        `/api/ransomware/groups/${slug}/notes/${noteName}`,
+      ),
+    enabled: Boolean(slug && noteName),
+  });
+}
+
+export interface NegotiationChatSummary {
+  id: string;
+  message_count: number;
+  initialransom: string;
+  negotiatedransom: string;
+  paid: boolean;
+}
+
+export function useRansomwareNegotiations(slug: string | undefined) {
+  return useQuery({
+    queryKey: ["ransomware-negotiations", slug],
+    queryFn: () => apiFetch<{ data: NegotiationChatSummary[]; configured: boolean }>(`/api/ransomware/groups/${slug}/negotiations`),
+    enabled: Boolean(slug),
+  });
+}
+
+export interface NegotiationMessage {
+  party: string;
+  content: string;
+  timestamp: string;
+}
+
+export function useRansomwareNegotiationChat(slug: string | undefined, chatId: string | undefined) {
+  return useQuery({
+    queryKey: ["ransomware-negotiation-chat", slug, chatId],
+    queryFn: () =>
+      apiFetch<{
+        chat_id: string;
+        initialransom: string;
+        negotiatedransom: string;
+        paid: boolean;
+        messages: NegotiationMessage[];
+      }>(`/api/ransomware/groups/${slug}/negotiations/${chatId}`),
+    enabled: Boolean(slug && chatId),
   });
 }

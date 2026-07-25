@@ -6,3 +6,4 @@ export * from "./syncLog";
 export * from "./syncState";
 export * from "./ransomwareGroups";
 export * from "./ransomwareVictims";
+export * from "./ransomwareIocs";
