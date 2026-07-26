@@ -164,6 +164,30 @@ docker compose logs -f worker   # watch ingestion jobs run
 docker compose down             # stop (add -v to also drop the Postgres volume)
 ```
 
+## Deploying the frontend to Vercel
+
+Only `apps/web` (a static Vite build) belongs on Vercel — it's a serverless/static platform and
+can't run `apps/api`'s persistent Fastify `app.listen()` server. Deploy `apps/api` (and run
+`apps/worker`) somewhere that supports long-running Node processes instead (Render, Railway,
+Fly.io, a VPS, etc.), then point the frontend at it.
+
+The root [`vercel.json`](../vercel.json) already tells Vercel exactly what to build, so **Root
+Directory in the Vercel project settings must be left as the repo root** (blank) — not
+`apps/web` and not `apps/api` — otherwise `vercel.json`'s paths (relative to Root Directory) won't
+resolve and Vercel falls back to guessing, which is what caused it to try type-checking `apps/api`
+directly in an earlier build.
+
+**Required Vercel project environment variable:**
+
+| Variable | Value |
+|---|---|
+| `VITE_API_BASE_URL` | the base URL of your deployed API, e.g. `https://sec1cng-api.onrender.com` |
+
+Without this, the deployed frontend's `apiFetch` (`apps/web/src/api/client.ts`) falls back to
+relative `/api/*` paths against the Vercel domain itself, which has no backend — every page will
+correctly show its "Failed to load, retrying..." state (by design — never a fake-data fallback)
+rather than actually working.
+
 ## Project layout
 
 ```
