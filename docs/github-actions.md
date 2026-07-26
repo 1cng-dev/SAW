@@ -41,6 +41,35 @@ providers reject unencrypted connections, and `pg` (the driver this project uses
 > deployment already uses, just use that connection string instead of provisioning a new one —
 > as long as it's reachable from the internet (not `localhost`).
 
+### Using Supabase specifically
+
+This project's dev database has been migrated onto Supabase. Three gotchas we actually hit
+getting it working, so you don't have to re-discover them:
+
+1. **The "direct connection" host is IPv6-only.** Supabase's dashboard shows a connection string
+   like `db.<project-ref>.supabase.co:5432` — this only resolves an `AAAA` (IPv6) record, no `A`
+   record. GitHub-hosted runners (and plenty of other networks) don't have outbound IPv6, so this
+   host will fail with `could not translate host name` or just hang. **Use a pooler connection
+   instead** (below), not the direct host.
+2. **The pooler hostname is regional and not shown until you find it.** The pattern is
+   `aws-0-<region>.pooler.supabase.com`, username `postgres.<project-ref>` — but the dashboard's
+   connection-string panel (Project Settings → Database → Connection Pooling) tells you the exact
+   region for your project; use that rather than guessing.
+3. **Recent `pg`/`pg-connection-string` versions changed what `sslmode=require` means** (it now
+   implies full certificate-chain verification, which fails against Supabase's pooler with
+   `self-signed certificate in certificate chain`). Add `uselibpqcompat=true` to the query string
+   to get the traditional "encrypt but don't verify the chain" behavior:
+
+   ```
+   postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres?uselibpqcompat=true&sslmode=require
+   ```
+
+   Port `5432` here is the **session pooler** (behaves like a normal Postgres connection — use
+   this for `DATABASE_URL`, migrations, and everyday app traffic). Port `6543` is the
+   **transaction pooler** (pgbouncer transaction mode) — faster for serverless/edge functions
+   making single quick queries, but can misbehave with multi-statement transactions or prepared
+   statements, so it's not what this project's migrator uses.
+
 ## 2. Add repository secrets
 
 In the GitHub UI: **Settings → Secrets and variables → Actions → Secrets tab → New repository
