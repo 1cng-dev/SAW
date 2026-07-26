@@ -1,4 +1,4 @@
-# Sec-1CNG
+# 1CNG Security Advisory
 
 A security advisory aggregator for security.1cloudng.com. Ingests **real, live**
 data only — NVD, MITRE, GitHub Security Advisories, security news/vendor RSS

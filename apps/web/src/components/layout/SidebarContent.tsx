@@ -22,7 +22,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <HStack spacing={2} px={2}>
           <ShieldHalf size={22} color="#f97316" />
           <Text fontWeight="semibold" letterSpacing="tight" fontSize="lg">
-            Sec-1CNG
+            1CNG Security Advisory
           </Text>
         </HStack>
       </a>

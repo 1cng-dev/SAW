@@ -13,6 +13,7 @@ import { SeverityDonut } from "../components/charts/SeverityDonut";
 import { DateRangeFilter, DateRangeOption } from "../components/ui/DateRangeFilter";
 import { LiveIndicator } from "../components/ui/LiveIndicator";
 import { ActivityTimeline } from "../components/dashboard/ActivityTimeline";
+import { LiveIngestionChart } from "../components/dashboard/LiveIngestionChart";
 import { ThreatScoreCard } from "../components/dashboard/ThreatScoreCard";
 import { GeographicThreatMap } from "../components/dashboard/GeographicThreatMap";
 import { ThreatCategories } from "../components/dashboard/ThreatCategories";
@@ -102,45 +103,47 @@ export function HomePage() {
   })();
 
   return (
-    <Stack spacing={4}>
+    <Stack spacing={6}>
       {/* Header with Controls */}
-      <Flex justify="space-between" align="center" mb={2}>
-        <Box>
-          <Heading size="lg" fontWeight="bold">Security Dashboard</Heading>
-          <Text color="text.muted" fontSize="sm">Real-time threat intelligence and CVE tracking</Text>
-        </Box>
-        <HStack spacing={3}>
-          <Badge colorScheme="green" variant="subtle" px={3} py={1} borderRadius="full">
-            <HStack spacing={2}>
-              <Box width="8px" height="8px" borderRadius="full" bg="green.500" />
-              <Text fontSize="sm">Live</Text>
-            </HStack>
-          </Badge>
-          <DateRangeFilter value={dateRange} onChange={setDateRange} />
-          <Tooltip label="Refresh Data">
-            <IconButton
-              aria-label="Refresh"
-              icon={<RefreshCw size={18} />}
-              variant="outline"
-              borderColor="border.default"
-              onClick={handleRefresh}
-              isLoading={stats.isLoading || criticalToday.isLoading}
-            />
-          </Tooltip>
-          <Tooltip label="Sync with GitHub Actions">
-            <IconButton
-              aria-label="Sync"
-              icon={<Github size={18} />}
-              variant="outline"
-              borderColor="border.default"
-              onClick={handleSync}
-            />
-          </Tooltip>
-        </HStack>
-      </Flex>
-      <Text fontSize="xs" color="text.muted" mb={4}>
-        Last updated: {lastUpdated ? new Date(lastUpdated).toLocaleString() : 'Loading...'}
-      </Text>
+      <Box>
+        <Flex justify="space-between" align="center">
+          <Box>
+            <Heading size="lg" fontWeight="bold">Security Advisory</Heading>
+            <Text color="text.muted" fontSize="sm">Real-time threat intelligence and CVE tracking</Text>
+          </Box>
+          <HStack spacing={3}>
+            <Badge colorScheme="green" variant="subtle" px={3} py={1} borderRadius="full">
+              <HStack spacing={2}>
+                <Box width="8px" height="8px" borderRadius="full" bg="green.500" />
+                <Text fontSize="sm">Live</Text>
+              </HStack>
+            </Badge>
+            <DateRangeFilter value={dateRange} onChange={setDateRange} />
+            <Tooltip label="Refresh Data">
+              <IconButton
+                aria-label="Refresh"
+                icon={<RefreshCw size={18} />}
+                variant="outline"
+                borderColor="border.default"
+                onClick={handleRefresh}
+                isLoading={stats.isLoading || criticalToday.isLoading}
+              />
+            </Tooltip>
+            <Tooltip label="Sync with GitHub Actions">
+              <IconButton
+                aria-label="Sync"
+                icon={<Github size={18} />}
+                variant="outline"
+                borderColor="border.default"
+                onClick={handleSync}
+              />
+            </Tooltip>
+          </HStack>
+        </Flex>
+        <Text fontSize="xs" color="text.muted" mt={2}>
+          Last updated: {lastUpdated ? new Date(lastUpdated).toLocaleString() : 'Loading...'}
+        </Text>
+      </Box>
 
       {/* Top Row: Threat Score (real composite from live stats) and key real metrics */}
       <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={3}>
@@ -221,9 +224,12 @@ export function HomePage() {
         ) : null}
       </Box>
 
+      {/* Real-time ingestion pulse — genuinely live, sourced from actual record creation timestamps */}
+      <LiveIngestionChart />
+
       {/* Third Row: Severity Distribution */}
       <Box>
-        <HStack justify="space-between" mb={2}>
+        <HStack justify="space-between" mb={3}>
           <Heading size="md" fontWeight="semibold">Severity Distribution</Heading>
           <Badge colorScheme="orange" variant="subtle">All Time</Badge>
         </HStack>
@@ -257,7 +263,7 @@ export function HomePage() {
       <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
         {/* CVE Disclosure Trend Chart */}
         <Box>
-          <HStack justify="space-between" mb={2}>
+          <HStack justify="space-between" mb={3}>
             <Heading size="md" fontWeight="semibold">CVE Disclosure Trend</Heading>
             <Badge colorScheme="purple" variant="subtle">30 Days</Badge>
           </HStack>
@@ -277,7 +283,7 @@ export function HomePage() {
 
         {/* News Volume Trend */}
         <Box>
-          <HStack justify="space-between" mb={2}>
+          <HStack justify="space-between" mb={3}>
             <Heading size="md" fontWeight="semibold">News Volume Trend</Heading>
             <Badge colorScheme="cyan" variant="subtle">7 Days</Badge>
           </HStack>
@@ -297,7 +303,7 @@ export function HomePage() {
 
       {/* Real-time Activity Timeline: merges latest CVEs, news, and ransomware victim claims */}
       <Box>
-        <HStack spacing={2} mb={2}>
+        <HStack spacing={2} mb={3}>
           <Heading size="md" fontWeight="semibold">Recent Activity</Heading>
           <LiveIndicator lastUpdated={lastUpdated} />
         </HStack>

@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   HStack,
+  IconButton,
   Table,
   TableContainer,
   Tbody,
@@ -17,9 +18,32 @@ import {
 import { ChevronLeft, ChevronRight, ChevronsUpDown, Star } from "lucide-react";
 import { SeverityBadge } from "./SeverityBadge";
 import { CveTooltip } from "./CveTooltip";
+import { useWatchlist } from "../../hooks/useWatchlist";
 import type { Cve } from "../../api/types";
 
+function WatchToggleCell({ cveId }: { cveId: string }) {
+  const { isCveWatched, toggleCve } = useWatchlist();
+  const watched = isCveWatched(cveId);
+  return (
+    <IconButton
+      aria-label={watched ? "Remove from watchlist" : "Add to watchlist"}
+      icon={<Star size={14} color={watched ? "#f97316" : "#64748b"} fill={watched ? "#f97316" : "none"} />}
+      size="xs"
+      variant="ghost"
+      onClick={(e) => {
+        e.stopPropagation();
+        toggleCve(cveId);
+      }}
+    />
+  );
+}
+
 const columns: ColumnDef<Cve>[] = [
+  {
+    id: "watch",
+    header: "",
+    cell: ({ row }) => <WatchToggleCell cveId={row.original.id} />,
+  },
   {
     accessorKey: "id",
     header: "CVE ID",

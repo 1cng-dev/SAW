@@ -6,6 +6,7 @@ import { registerStatsRoutes } from "./stats";
 import { registerAdminRoutes } from "./admin";
 import { registerThreatIntelRoutes } from "./threatIntel";
 import { registerRansomwareRoutes } from "./ransomware";
+import { registerOsintRoutes } from "./osint";
 
 export function registerRoutes(app: FastifyInstance) {
   registerCveRoutes(app);
@@ -15,6 +16,7 @@ export function registerRoutes(app: FastifyInstance) {
   registerAdminRoutes(app);
   registerThreatIntelRoutes(app);
   registerRansomwareRoutes(app);
+  registerOsintRoutes(app);
 
   app.get("/api/health", async () => ({ status: "ok" }));
 }

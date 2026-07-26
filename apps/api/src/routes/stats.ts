@@ -1,6 +1,6 @@
 import { and, eq, gte, sql, avg } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
-import { cves, newsArticles, vendorAdvisories } from "@sec1cng/db";
+import { cves, newsArticles, vendorAdvisories, ransomwareVictims } from "@sec1cng/db";
 
 export function registerStatsRoutes(app: FastifyInstance) {
   app.get("/api/stats", async (_request, reply) => {
@@ -72,7 +72,7 @@ export function registerStatsRoutes(app: FastifyInstance) {
     return reply.send({
       exploitedInWild: exploited.count,
       hasPublicPoc: hasPoc.count,
-      avgCvssScore: avgCvss.avg ? parseFloat(avgCvss.avg.toFixed(1)) : 0,
+      avgCvssScore: avgCvss.avg ? Math.round(Number(avgCvss.avg) * 10) / 10 : 0,
       newThisWeek: newThisWeek.count,
     });
   });
@@ -171,5 +171,46 @@ export function registerStatsRoutes(app: FastifyInstance) {
       .orderBy(sql`to_char(${cves.publishedDate}, 'YYYY-MM-DD')`);
 
     return reply.send({ data: rows });
+  });
+
+  // Real "live pulse" for the dashboard: hourly counts of records actually
+  // ingested (by created_at/fetched_at, not published_date) across CVEs,
+  // news, and ransomware victim claims over the last N hours.
+  app.get("/api/stats/ingestion-activity", async (request, reply) => {
+    const { hours = "24" } = request.query as { hours?: string };
+    const hoursNum = Math.min(Math.max(parseInt(hours, 10) || 24, 1), 168);
+    const since = new Date(Date.now() - hoursNum * 60 * 60 * 1000);
+
+    const bucket = (col: any) => sql<string>`to_char(date_trunc('hour', ${col}), 'YYYY-MM-DD"T"HH24:00:00"Z"')`;
+
+    const [cveRows, newsRows, ransomwareRows] = await Promise.all([
+      app.db
+        .select({ hour: bucket(cves.createdAt), count: sql<number>`count(*)::int` })
+        .from(cves)
+        .where(gte(cves.createdAt, since))
+        .groupBy(sql`date_trunc('hour', ${cves.createdAt})`),
+      app.db
+        .select({ hour: bucket(newsArticles.fetchedAt), count: sql<number>`count(*)::int` })
+        .from(newsArticles)
+        .where(gte(newsArticles.fetchedAt, since))
+        .groupBy(sql`date_trunc('hour', ${newsArticles.fetchedAt})`),
+      app.db
+        .select({ hour: bucket(ransomwareVictims.createdAt), count: sql<number>`count(*)::int` })
+        .from(ransomwareVictims)
+        .where(gte(ransomwareVictims.createdAt, since))
+        .groupBy(sql`date_trunc('hour', ${ransomwareVictims.createdAt})`),
+    ]);
+
+    const merged = new Map<string, { hour: string; cves: number; news: number; ransomware: number }>();
+    const ensure = (hour: string) => {
+      if (!merged.has(hour)) merged.set(hour, { hour, cves: 0, news: 0, ransomware: 0 });
+      return merged.get(hour)!;
+    };
+    for (const row of cveRows) ensure(row.hour).cves = row.count;
+    for (const row of newsRows) ensure(row.hour).news = row.count;
+    for (const row of ransomwareRows) ensure(row.hour).ransomware = row.count;
+
+    const data = Array.from(merged.values()).sort((a, b) => a.hour.localeCompare(b.hour));
+    return reply.send({ data });
   });
 }

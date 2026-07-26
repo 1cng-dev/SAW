@@ -1,8 +1,15 @@
 import { useState } from "react";
-import { Box, Heading, Text, Input, Button, VStack, HStack, Badge, SimpleGrid, Alert, AlertIcon, AlertTitle, AlertDescription, Code, Link, Flex, useColorModeValue, Divider } from "@chakra-ui/react";
+import { Box, Heading, Text, Input, Button, VStack, HStack, Badge, SimpleGrid, Alert, AlertIcon, AlertTitle, AlertDescription, Code, Link, Flex, useColorModeValue, Divider, Wrap, WrapItem } from "@chakra-ui/react";
 import { Search, Shield, AlertTriangle, CheckCircle, HelpCircle, ExternalLink, Radar, Globe, Lock, Activity } from "lucide-react";
 import { useThreatIntelLookup } from "../api/hooks";
 import { ExternalApiResultTable } from "../components/threatintel/ExternalApiResultTable";
+
+const EXAMPLES: { type: string; value: string }[] = [
+  { type: "IP", value: "185.220.101.45" },
+  { type: "DOMAIN", value: "anthropic.com" },
+  { type: "SHA-256", value: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" },
+  { type: "URL", value: "https://example.com/path" },
+];
 
 export function ThreatIntelPage() {
   const [indicator, setIndicator] = useState("");
@@ -14,6 +21,11 @@ export function ThreatIntelPage() {
     if (indicator.trim()) {
       setSearchQuery(indicator.trim());
     }
+  };
+
+  const runExample = (value: string) => {
+    setIndicator(value);
+    setSearchQuery(value);
   };
 
   const getVerdictColor = (verdict: string) => {
@@ -100,6 +112,26 @@ export function ThreatIntelPage() {
             <Search size={18} />
           </Button>
         </HStack>
+      </Box>
+
+      <Box mb={8}>
+        <Text fontSize="sm" color="text.muted" mb={3} fontWeight="medium">
+          Example lookups &mdash; click to run
+        </Text>
+        <Wrap spacing={3}>
+          {EXAMPLES.map((ex) => (
+            <WrapItem key={ex.value}>
+              <Button variant="outline" size="sm" borderColor="border.default" onClick={() => runExample(ex.value)}>
+                <Badge mr={2} fontSize="9px" colorScheme="gray" variant="solid">{ex.type}</Badge>
+                <Text fontFamily="mono" fontSize="xs" noOfLines={1} maxW="240px">{ex.value}</Text>
+              </Button>
+            </WrapItem>
+          ))}
+        </Wrap>
+        <Text fontSize="xs" color="text.muted" mt={3} fontFamily="mono">
+          Tip: paste any IPv4 address, domain name, MD5/SHA-1/SHA-256 hash, or full URL &mdash; the lookup checks
+          real ransomware.live IOC data, CVE/news mentions, and (if configured) VirusTotal/AbuseIPDB.
+        </Text>
       </Box>
 
       {isError && (

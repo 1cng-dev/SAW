@@ -1,13 +1,16 @@
 import { Link } from "@tanstack/react-router";
-import { Box, HStack, Text, Badge, useColorModeValue, VStack, Flex } from "@chakra-ui/react";
-import { ShieldAlert, Bug, Clock, TrendingUp, ExternalLink } from "lucide-react";
+import { Box, HStack, Text, Badge, useColorModeValue, VStack, Flex, IconButton } from "@chakra-ui/react";
+import { ShieldAlert, Bug, Clock, TrendingUp, ExternalLink, Star } from "lucide-react";
 import { SeverityBadge } from "./SeverityBadge";
 import { decodeHtmlEntities } from "../../lib/text";
+import { useWatchlist } from "../../hooks/useWatchlist";
 import type { Cve } from "../../api/types";
 
 export function CveCard({ cve }: { cve: Cve }) {
   const cardBg = useColorModeValue("white", "charcoal.800");
   const hoverShadow = useColorModeValue("0 4px 12px rgba(0,0,0,0.08)", "0 0 0 1px #2a2a2a, 0 8px 20px rgba(249,115,22,0.08)");
+  const { isCveWatched, toggleCve } = useWatchlist();
+  const watched = isCveWatched(cve.id);
 
   const getTimeAgo = (dateString?: string) => {
     if (!dateString) return '';
@@ -23,7 +26,25 @@ export function CveCard({ cve }: { cve: Cve }) {
   };
 
   return (
-    <Link to="/cves/$cveId" params={{ cveId: cve.id }} style={{ display: "block", height: "100%" }}>
+    <Box position="relative" h="full">
+      <IconButton
+        aria-label={watched ? "Remove from watchlist" : "Add to watchlist"}
+        icon={<Star size={16} color={watched ? "#f97316" : "#64748b"} fill={watched ? "#f97316" : "none"} />}
+        size="sm"
+        variant="ghost"
+        position="absolute"
+        top={2}
+        right={2}
+        zIndex={2}
+        bg={cardBg}
+        _hover={{ bg: cardBg }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleCve(cve.id);
+        }}
+      />
+      <Link to="/cves/$cveId" params={{ cveId: cve.id }} style={{ display: "block", height: "100%" }}>
       <Box
         borderWidth="1px"
         borderColor="border.default"
@@ -32,7 +53,7 @@ export function CveCard({ cve }: { cve: Cve }) {
         p={5}
         h="full"
         transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
-        _hover={{ 
+        _hover={{
           borderColor: "accent.solid",
           boxShadow: hoverShadow,
           transform: 'translateY(-2px)'
@@ -129,6 +150,7 @@ export function CveCard({ cve }: { cve: Cve }) {
           )}
         </VStack>
       </Box>
-    </Link>
+      </Link>
+    </Box>
   );
 }

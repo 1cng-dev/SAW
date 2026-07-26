@@ -5,6 +5,11 @@ import type { CveQuery } from "@sec1cng/shared";
 export function buildCveWhereClause(query: CveQuery): SQL | undefined {
   const conditions: SQL[] = [];
 
+  if (query.ids) {
+    const values = query.ids.split(",").map((v) => v.trim()).filter(Boolean);
+    if (values.length > 0) conditions.push(inArray(cves.id, values));
+  }
+
   if (query.severity) {
     const values = query.severity.split(",").map((s) => s.trim()).filter(Boolean);
     if (values.length > 0) conditions.push(inArray(cves.severity, values as never[]));

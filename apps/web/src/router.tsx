@@ -11,6 +11,7 @@ import { ThreatReportsPage } from "./routes/ThreatReports";
 import { RansomwareTrackerPage } from "./routes/RansomwareTracker";
 import { AnnouncementsPage } from "./routes/Announcements";
 import { ThreatIntelPage } from "./routes/ThreatIntel";
+import { OsintSearchPage } from "./routes/OsintSearch";
 import { WatchlistPage } from "./routes/Watchlist";
 import { AttackMapPage } from "./routes/AttackMap";
 import { DigestPage } from "./routes/Digest";
@@ -81,6 +82,12 @@ const threatIntelRoute = createRoute({
   component: ThreatIntelPage,
 });
 
+const osintSearchRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/osint",
+  component: OsintSearchPage,
+});
+
 const watchlistRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/watchlist",
@@ -116,6 +123,7 @@ const routeTree = rootRoute.addChildren([
   ransomwareTrackerRoute,
   announcementsRoute,
   threatIntelRoute,
+  osintSearchRoute,
   watchlistRoute,
   attackMapRoute,
   digestRoute,

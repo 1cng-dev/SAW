@@ -11,6 +11,7 @@ import {
   Globe,
   FileDown,
   Info,
+  Radar,
 } from "lucide-react";
 
 export interface NavLinkDef {
@@ -31,6 +32,7 @@ export const NAV_LINKS: NavLinkDef[] = [
 
   // ADDITIONAL
   { to: "/threat-intel", label: "Threat Intel / IOC Lookup", icon: Search, section: "ADDITIONAL" },
+  { to: "/osint", label: "OSINT / Network Search", icon: Radar, section: "ADDITIONAL" },
   { to: "/watchlist", label: "CVE Watchlist", icon: Star, section: "ADDITIONAL" },
   { to: "/attack-map", label: "Global Attack/Advisory Map", icon: Globe, section: "ADDITIONAL" },
   { to: "/digest", label: "Weekly Security Digest", icon: FileDown, section: "ADDITIONAL" },

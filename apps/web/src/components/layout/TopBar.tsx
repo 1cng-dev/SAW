@@ -56,7 +56,7 @@ export function TopBar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
           <HStack spacing={2} display={{ base: "none", md: "flex" }}>
             <Shield size={24} color="#f97316" />
             <Text fontSize="lg" fontWeight="bold" color="accent.400">
-              Sec-1CNG
+              1CNG Security Advisory
             </Text>
           </HStack>
         </HStack>

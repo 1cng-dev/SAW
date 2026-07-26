@@ -2,6 +2,7 @@ import { z } from "zod";
 import { SEVERITIES } from "./constants";
 
 export const cveQuerySchema = z.object({
+  ids: z.string().optional(), // comma-separated exact CVE IDs
   severity: z.string().optional(), // comma-separated list of SEVERITIES
   vendor: z.string().optional(), // comma-separated list
   dateFrom: z.string().optional(),

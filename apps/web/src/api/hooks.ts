@@ -4,6 +4,7 @@ import { apiFetch } from "./client";
 import type { Cve, NewsArticle, Paginated, VendorSummary } from "./types";
 
 export interface CveFilters {
+  ids?: string;
   severity?: string;
   vendor?: string;
   dateFrom?: string;
@@ -27,12 +28,13 @@ export function useStats() {
   });
 }
 
-export function useCves(filters: CveFilters) {
+export function useCves(filters: CveFilters, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["cves", filters],
     queryFn: () => apiFetch<Paginated<Cve>>("/api/cves", filters as Record<string, string | number | boolean | undefined>),
     placeholderData: (prev) => prev,
     refetchInterval: 60_000,
+    enabled: options?.enabled,
   });
 }
 
@@ -122,6 +124,21 @@ export function useThreatIntelLookup(indicator: string) {
     queryKey: ["threat-intel", indicator],
     queryFn: () => apiFetch<any>("/api/threat-intel/lookup", { indicator }),
     enabled: indicator.length > 0,
+  });
+}
+
+export interface IngestionActivityPoint {
+  hour: string;
+  cves: number;
+  news: number;
+  ransomware: number;
+}
+
+export function useIngestionActivity(hours = 24) {
+  return useQuery({
+    queryKey: ["ingestion-activity", hours],
+    queryFn: () => apiFetch<{ data: IngestionActivityPoint[] }>("/api/stats/ingestion-activity", { hours }),
+    refetchInterval: 60_000,
   });
 }
 
