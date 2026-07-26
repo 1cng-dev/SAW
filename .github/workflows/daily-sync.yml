@@ -30,6 +30,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify required secrets are configured
+        run: |
+          if [ -z "${DATABASE_URL}" ]; then
+            echo "::error::DATABASE_URL secret is not set. This workflow needs a Postgres it can reach from a GitHub-hosted runner (not localhost)."
+            echo "::error::Add it under Settings → Secrets and variables → Actions → New repository secret. See docs/github-actions.md for step-by-step instructions."
+            exit 1
+          fi
+
       - name: Apply pending migrations
         run: npm run db:migrate
 

@@ -124,6 +124,11 @@ worker or deployed API needs to be running for CVEs/news/vendors/GHSA/trending. 
 complement to, not a replacement for, the continuously-running worker: use it as a safety net for
 deployments where `apps/worker` isn't kept running 24/7, or just as a second guarantee.
 
+> **New to this workflow, or seeing it fail with `DATABASE_URL is not set`?** See
+> [github-actions.md](./github-actions.md) for the full step-by-step fix (where to get a
+> reachable Postgres, exactly which secrets to add and where, troubleshooting). The summary
+> below assumes you've already been through that once.
+
 **Required repo secret:**
 
 | Secret | Required? | Notes |

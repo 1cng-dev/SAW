@@ -11,6 +11,7 @@ notes, negotiation chats). No mock or seeded data anywhere in the pipeline.
   scheduled ingestion, Docker Compose
 - [`docs/database.md`](./docs/database.md) — every table, column, and what populates it
 - [`docs/api.md`](./docs/api.md) — every endpoint, its params, and its response shape
+- [`docs/github-actions.md`](./docs/github-actions.md) — setting up the daily sync workflow (repo secrets, troubleshooting)
 
 The rest of this README is a quick-start; the docs above are the source of truth for anything
 more detailed.
