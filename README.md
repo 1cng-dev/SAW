@@ -1,8 +1,19 @@
 # Sec-1CNG
 
 A security advisory aggregator for security.1cloudng.com. Ingests **real, live**
-data only — NVD, MITRE, GitHub Security Advisories, and security news/vendor
-RSS feeds. No mock or seeded data anywhere in the pipeline.
+data only — NVD, MITRE, GitHub Security Advisories, security news/vendor RSS
+feeds, and ransomware.live (group tracking, IOCs, ATT&CK mapping, ransom
+notes, negotiation chats). No mock or seeded data anywhere in the pipeline.
+
+## Documentation
+
+- [`docs/setup.md`](./docs/setup.md) — full environment variable reference, running the app,
+  scheduled ingestion, Docker Compose
+- [`docs/database.md`](./docs/database.md) — every table, column, and what populates it
+- [`docs/api.md`](./docs/api.md) — every endpoint, its params, and its response shape
+
+The rest of this README is a quick-start; the docs above are the source of truth for anything
+more detailed.
 
 ## Stack
 
