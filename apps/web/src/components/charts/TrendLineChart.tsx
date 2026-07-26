@@ -33,7 +33,16 @@ export function TrendLineChart({ data, color = "#f97316" }: { data: TrendPoint[]
           contentStyle={{ background: tooltipBg, border: `1px solid ${tooltipBorder}`, borderRadius: 8, fontSize: 12 }}
           labelStyle={{ color: tooltipText }}
         />
-        <Line type="monotone" dataKey="count" stroke={color} strokeWidth={2} dot={false} />
+        <Line 
+          type="monotone" 
+          dataKey="count" 
+          stroke={color} 
+          strokeWidth={2} 
+          dot={false}
+          isAnimationActive={true}
+          animationDuration={1500}
+          animationEasing="ease-in-out"
+        />
       </LineChart>
     </ResponsiveContainer>
   );

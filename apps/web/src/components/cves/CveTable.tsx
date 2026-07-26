@@ -16,6 +16,7 @@ import {
 } from "@chakra-ui/react";
 import { ChevronLeft, ChevronRight, ChevronsUpDown, Star } from "lucide-react";
 import { SeverityBadge } from "./SeverityBadge";
+import { CveTooltip } from "./CveTooltip";
 import type { Cve } from "../../api/types";
 
 const columns: ColumnDef<Cve>[] = [
@@ -23,11 +24,11 @@ const columns: ColumnDef<Cve>[] = [
     accessorKey: "id",
     header: "CVE ID",
     cell: (info) => (
-      <Link to="/cves/$cveId" params={{ cveId: info.getValue<string>() }}>
+      <CveTooltip cve={info.row.original}>
         <Text as="span" fontFamily="mono" fontSize="sm" color="accent.400" _hover={{ textDecoration: "underline" }} fontWeight="medium">
           {info.getValue<string>()}
         </Text>
-      </Link>
+      </CveTooltip>
     ),
   },
   {

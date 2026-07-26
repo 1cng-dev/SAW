@@ -48,6 +48,7 @@ export function useTrendingCves(limit = 20) {
   return useQuery({
     queryKey: ["cves-trending", limit],
     queryFn: () => apiFetch<{ data: Cve[] }>("/api/cves/trending", { limit }),
+    refetchInterval: 60_000, // 1 minute for real-time updates
   });
 }
 
@@ -64,6 +65,7 @@ export function useVendors() {
   return useQuery({
     queryKey: ["vendors"],
     queryFn: () => apiFetch<{ data: VendorSummary[] }>("/api/vendors"),
+    refetchInterval: 5 * 60_000, // 5 minutes for vendor data updates
   });
 }
 
@@ -237,5 +239,49 @@ export function useRansomwareNegotiationChat(slug: string | undefined, chatId: s
         messages: NegotiationMessage[];
       }>(`/api/ransomware/groups/${slug}/negotiations/${chatId}`),
     enabled: Boolean(slug && chatId),
+  });
+}
+
+export function useRansomwareGeo() {
+  return useQuery({
+    queryKey: ["ransomware-geo"],
+    queryFn: () => apiFetch<{ data: Array<{ country: string; count: number }> }>("/api/ransomware/geo"),
+    refetchInterval: 5 * 60_000,
+  });
+}
+
+export function useNewsCategories(days = 14) {
+  return useQuery({
+    queryKey: ["news-categories", days],
+    queryFn: () =>
+      apiFetch<{
+        breakdown: Array<{ category: string; count: number }>;
+        trend: Array<{ date: string; categories: Record<string, number> }>;
+      }>("/api/news/categories", { days }),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useRansomwareAttackCoverage() {
+  return useQuery({
+    queryKey: ["ransomware-attack-coverage"],
+    queryFn: () =>
+      apiFetch<{
+        data: Array<{ tactic: string; tacticId: string; groupsObserved: number; distinctTechniques: number }>;
+        groupsWithData: number;
+      }>("/api/ransomware/attack-coverage"),
+    refetchInterval: 5 * 60_000,
+  });
+}
+
+export function useRecentRansomwareIocs(limit = 20) {
+  return useQuery({
+    queryKey: ["recent-ransomware-iocs", limit],
+    queryFn: () =>
+      apiFetch<{ data: Array<{ id: number; groupName: string; iocType: string; iocValue: string; syncedAt: string }> }>(
+        "/api/ransomware/iocs/recent",
+        { limit },
+      ),
+    refetchInterval: 60_000,
   });
 }

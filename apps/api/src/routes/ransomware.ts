@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { desc, eq, gte, sql, count } from "drizzle-orm";
-import { ransomwareGroups, ransomwareVictims } from "@sec1cng/db";
+import { desc, eq, gte, isNotNull, sql, count } from "drizzle-orm";
+import { ransomwareGroups, ransomwareVictims, ransomwareIocs } from "@sec1cng/db";
 import {
   syncRansomwareData,
   ransomwareApiHeaders,
@@ -279,5 +279,75 @@ export function registerRansomwareRoutes(app: FastifyInstance) {
       app.log.error({ error: String(error), slug, chatId }, "Failed to fetch negotiation transcript");
       return reply.status(502).send({ error: "Failed to fetch negotiation transcript from ransomware.live" });
     }
+  });
+
+  // Real per-country victim-claim counts from ransomware_victims (country is an
+  // ISO code from ransomware.live, e.g. "US", "IN" — no fabricated trend/threat data).
+  app.get("/api/ransomware/geo", async (_request, reply) => {
+    const rows = await app.db
+      .select({
+        country: ransomwareVictims.country,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(ransomwareVictims)
+      .where(isNotNull(ransomwareVictims.country))
+      .groupBy(ransomwareVictims.country)
+      .orderBy(desc(sql`count(*)`));
+
+    return reply.send({ data: rows });
+  });
+
+  // Aggregates whatever MITRE ATT&CK data is currently cached in
+  // ransomware_groups.attack_techniques (populated lazily per-group on first
+  // view — see GET /api/ransomware/groups/:slug/attack). Honest about partial
+  // coverage: groupsWithData tells the caller how much of the real dataset
+  // this aggregate actually reflects.
+  app.get("/api/ransomware/attack-coverage", async (_request, reply) => {
+    const groups = await app.db
+      .select({ slug: ransomwareGroups.slug, ttps: ransomwareGroups.attackTechniques })
+      .from(ransomwareGroups)
+      .where(isNotNull(ransomwareGroups.attackTechniques));
+
+    const tacticCounts = new Map<string, { tacticId: string; groupCount: number; techniqueIds: Set<string> }>();
+
+    for (const group of groups) {
+      const ttps = group.ttps as Array<{ tactic_id: string; tactic_name: string; techniques: Array<{ technique_id: string }> }> | null;
+      if (!ttps) continue;
+      for (const tactic of ttps) {
+        const entry = tacticCounts.get(tactic.tactic_name) ?? {
+          tacticId: tactic.tactic_id,
+          groupCount: 0,
+          techniqueIds: new Set<string>(),
+        };
+        entry.groupCount += 1;
+        for (const technique of tactic.techniques ?? []) {
+          entry.techniqueIds.add(technique.technique_id);
+        }
+        tacticCounts.set(tactic.tactic_name, entry);
+      }
+    }
+
+    const data = Array.from(tacticCounts.entries())
+      .map(([tacticName, entry]) => ({
+        tactic: tacticName,
+        tacticId: entry.tacticId,
+        groupsObserved: entry.groupCount,
+        distinctTechniques: entry.techniqueIds.size,
+      }))
+      .sort((a, b) => b.groupsObserved - a.groupsObserved);
+
+    return reply.send({ data, groupsWithData: groups.length });
+  });
+
+  // Real, most-recently-synced IOCs from ransomware.live (see ransomware_iocs table).
+  app.get("/api/ransomware/iocs/recent", async (request, reply) => {
+    const limit = Math.min(Number((request.query as { limit?: string }).limit ?? 20), 100);
+    const rows = await app.db
+      .select()
+      .from(ransomwareIocs)
+      .orderBy(desc(ransomwareIocs.syncedAt))
+      .limit(limit);
+
+    return reply.send({ data: rows });
   });
 }
