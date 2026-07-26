@@ -177,6 +177,12 @@ Directory in the Vercel project settings must be left as the repo root** (blank)
 resolve and Vercel falls back to guessing, which is what caused it to try type-checking `apps/api`
 directly in an earlier build.
 
+`vercel.json`'s `installCommand` explicitly passes `--include=dev`. Without it, Vercel's
+`NODE_ENV=production` build environment makes plain `npm install` silently skip every workspace's
+`devDependencies` — which is where `vite`, `typescript`, `tailwindcss`, etc. all live here — so
+the build would fail immediately at `tsc -b && vite build` with those tools missing (verified this
+locally: `NODE_ENV=production npm install` really does skip devDependencies even on npm 11).
+
 **Required Vercel project environment variable:**
 
 | Variable | Value |
