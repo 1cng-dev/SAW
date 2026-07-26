@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Box, Heading, Text, Input, Button, VStack, HStack, Badge, SimpleGrid, Alert, AlertIcon, AlertTitle, AlertDescription, Code, Link } from "@chakra-ui/react";
-import { Search, Shield, AlertTriangle, CheckCircle, HelpCircle, ExternalLink } from "lucide-react";
+import { Box, Heading, Text, Input, Button, VStack, HStack, Badge, SimpleGrid, Alert, AlertIcon, AlertTitle, AlertDescription, Code, Link, Flex, useColorModeValue, Divider } from "@chakra-ui/react";
+import { Search, Shield, AlertTriangle, CheckCircle, HelpCircle, ExternalLink, Radar, Globe, Lock, Activity } from "lucide-react";
 import { useThreatIntelLookup } from "../api/hooks";
 import { ExternalApiResultTable } from "../components/threatintel/ExternalApiResultTable";
 
@@ -36,12 +36,56 @@ export function ThreatIntelPage() {
 
   return (
     <Box>
-      <Heading size="lg" mb={2}>
-        Threat Intel / IOC Lookup
-      </Heading>
-      <Text color="text.muted" mb={6}>
-        Search and analyze indicators of compromise (IPs, domains, hashes, URLs).
-      </Text>
+      {/* Enhanced Header Section */}
+      <Box mb={8}>
+        <Flex align="center" justify="space-between" mb={4}>
+          <HStack spacing={3}>
+            <Box 
+              p={3} 
+              borderRadius="xl" 
+              bg={useColorModeValue("orange.50", "orange.900/20")}
+              borderWidth="1px"
+              borderColor={useColorModeValue("orange.200", "orange.700")}
+            >
+              <Radar size={24} color="#ea580c" />
+            </Box>
+            <Box>
+              <Heading size="lg" mb={1}>
+                Threat Intel / IOC Lookup
+              </Heading>
+              <HStack spacing={2}>
+                <Badge colorScheme="orange" variant="subtle" px={2} py={1} borderRadius="md" fontSize="xs">
+                  <HStack spacing={1}>
+                    <Globe size={10} />
+                    <Text>Global Intelligence</Text>
+                  </HStack>
+                </Badge>
+                <Badge colorScheme="purple" variant="subtle" px={2} py={1} borderRadius="md" fontSize="xs">
+                  <HStack spacing={1}>
+                    <Shield size={10} />
+                    <Text>Real-time Analysis</Text>
+                  </HStack>
+                </Badge>
+              </HStack>
+            </Box>
+          </HStack>
+          <HStack spacing={3} display={{ base: "none", md: "flex" }}>
+            <Box textAlign="right">
+              <Text fontSize="xs" color="text.muted" fontWeight="medium">Supported Indicators</Text>
+              <HStack spacing={2} mt={1} justify="flex-end">
+                <Badge variant="outline" fontSize="xs" colorScheme="gray">IP Addresses</Badge>
+                <Badge variant="outline" fontSize="xs" colorScheme="gray">Domains</Badge>
+                <Badge variant="outline" fontSize="xs" colorScheme="gray">Hashes</Badge>
+                <Badge variant="outline" fontSize="xs" colorScheme="gray">URLs</Badge>
+              </HStack>
+            </Box>
+          </HStack>
+        </Flex>
+        <Text color="text.muted" fontSize="md">
+          Search and analyze indicators of compromise (IPs, domains, hashes, URLs) across multiple threat intelligence sources.
+        </Text>
+        <Divider mt={6} borderColor="border.default" />
+      </Box>
 
       <Box as="form" onSubmit={handleSearch} mb={8}>
         <HStack>

@@ -1,5 +1,5 @@
-import { AlertOctagon, FileWarning, Newspaper, ShieldCheck, Skull, TrendingUp, Activity, AlertCircle, Bug, Server } from "lucide-react";
-import { Box, Heading, HStack, SimpleGrid, Skeleton, Stack, Text, Wrap, VStack, Flex, Badge, useColorModeValue } from "@chakra-ui/react";
+import { AlertOctagon, FileWarning, Newspaper, ShieldCheck, Skull, TrendingUp, Activity, AlertCircle, Bug, Server, RefreshCw, Filter, Github } from "lucide-react";
+import { Box, Heading, HStack, SimpleGrid, Skeleton, Stack, Text, Wrap, VStack, Flex, Badge, useColorModeValue, Button, IconButton, Tooltip } from "@chakra-ui/react";
 import { useCves, useCveBreakdown, useNews, useRansomwareStats, useStats, useTrendingCves, useVendors, useDisclosureTrend, useStatTrend } from "../api/hooks";
 import { StatCard } from "../components/ui/StatCard";
 import { SkeletonCard } from "../components/ui/Skeleton";
@@ -61,6 +61,31 @@ export function HomePage() {
 
   const lastUpdated = stats.dataUpdatedAt ? new Date(stats.dataUpdatedAt).toISOString() : null;
 
+  const handleRefresh = () => {
+    try {
+      stats.refetch();
+      criticalToday.refetch();
+      trending.refetch();
+      news.refetch();
+      vendors.refetch();
+      cveBreakdown.refetch();
+      ransomwareStats.refetch();
+      disclosureTrend.refetch();
+      totalCvesTrend.refetch();
+      criticalTrend.refetch();
+      highTrend.refetch();
+      newsTrend.refetch();
+      advisoryTrend.refetch();
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    }
+  };
+
+  const handleSync = () => {
+    // Trigger GitHub Actions workflow
+    window.open('https://github.com/your-org/your-repo/actions/workflows/sync.yml', '_blank');
+  };
+
   // Real composite threat score (0-100) from live stats — not fabricated:
   // weighted from today's critical CVE volume, the share of all known CVEs
   // that are critical, and this week's real ransomware victim-claim volume.
@@ -77,37 +102,48 @@ export function HomePage() {
   })();
 
   return (
-    <Stack spacing={8}>
-      {/* Hero Section */}
-      <Box 
-        bgGradient="linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)"
-        borderRadius="2xl"
-        p={8}
-        borderWidth="1px"
-        borderColor="border.default"
-      >
-        <Flex justify="space-between" align="center" mb={6}>
-          <VStack align="start" spacing={2}>
-            <Heading size="3xl" fontWeight="bold">Security Dashboard</Heading>
-            <Text color="text.muted" fontSize="lg">Real-time threat intelligence and CVE tracking</Text>
-          </VStack>
-          <HStack spacing={4}>
-            <Badge colorScheme="green" variant="subtle" px={3} py={1} borderRadius="full">
-              <HStack spacing={2}>
-                <Box width="8px" height="8px" borderRadius="full" bg="green.500" />
-                <Text fontSize="sm">Live</Text>
-              </HStack>
-            </Badge>
-            <DateRangeFilter value={dateRange} onChange={setDateRange} />
-          </HStack>
-        </Flex>
-        <Text fontSize="sm" color="text.muted">
-          Last updated: {lastUpdated ? new Date(lastUpdated).toLocaleString() : 'Loading...'}
-        </Text>
-      </Box>
+    <Stack spacing={4}>
+      {/* Header with Controls */}
+      <Flex justify="space-between" align="center" mb={2}>
+        <Box>
+          <Heading size="lg" fontWeight="bold">Security Dashboard</Heading>
+          <Text color="text.muted" fontSize="sm">Real-time threat intelligence and CVE tracking</Text>
+        </Box>
+        <HStack spacing={3}>
+          <Badge colorScheme="green" variant="subtle" px={3} py={1} borderRadius="full">
+            <HStack spacing={2}>
+              <Box width="8px" height="8px" borderRadius="full" bg="green.500" />
+              <Text fontSize="sm">Live</Text>
+            </HStack>
+          </Badge>
+          <DateRangeFilter value={dateRange} onChange={setDateRange} />
+          <Tooltip label="Refresh Data">
+            <IconButton
+              aria-label="Refresh"
+              icon={<RefreshCw size={18} />}
+              variant="outline"
+              borderColor="border.default"
+              onClick={handleRefresh}
+              isLoading={stats.isLoading || criticalToday.isLoading}
+            />
+          </Tooltip>
+          <Tooltip label="Sync with GitHub Actions">
+            <IconButton
+              aria-label="Sync"
+              icon={<Github size={18} />}
+              variant="outline"
+              borderColor="border.default"
+              onClick={handleSync}
+            />
+          </Tooltip>
+        </HStack>
+      </Flex>
+      <Text fontSize="xs" color="text.muted" mb={4}>
+        Last updated: {lastUpdated ? new Date(lastUpdated).toLocaleString() : 'Loading...'}
+      </Text>
 
       {/* Top Row: Threat Score (real composite from live stats) and key real metrics */}
-      <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>
+      <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={3}>
         <ThreatScoreCard score={threatScore.value} maxScore={100} status={threatScore.status} />
         <StatCard
           label="Exploited in the Wild"
@@ -136,13 +172,13 @@ export function HomePage() {
       <Box>
         {stats.isError && <ErrorState />}
         {stats.isLoading ? (
-          <SimpleGrid columns={{ base: 2, md: 3, lg: 6 }} spacing={4}>
+          <SimpleGrid columns={{ base: 2, md: 3, lg: 6 }} spacing={3}>
             {Array.from({ length: 6 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
           </SimpleGrid>
         ) : stats.data ? (
-          <SimpleGrid columns={{ base: 2, md: 3, lg: 6 }} spacing={4}>
+          <SimpleGrid columns={{ base: 2, md: 3, lg: 6 }} spacing={3}>
             <StatCard 
               label="Total CVEs" 
               value={stats.data.totalCves.toLocaleString()} 
@@ -187,11 +223,11 @@ export function HomePage() {
 
       {/* Third Row: Severity Distribution */}
       <Box>
-        <HStack justify="space-between" mb={3}>
+        <HStack justify="space-between" mb={2}>
           <Heading size="md" fontWeight="semibold">Severity Distribution</Heading>
           <Badge colorScheme="orange" variant="subtle">All Time</Badge>
         </HStack>
-        <Box borderWidth="1px" borderColor="border.default" borderRadius="2xl" bg={cardBg} p={6} boxShadow="sm">
+        <Box borderWidth="1px" borderColor="border.default" borderRadius="2xl" bg={cardBg} p={4} boxShadow="sm">
           {stats.isError && <ErrorState />}
           {stats.isLoading ? (
             <Box h="256px">
@@ -206,26 +242,26 @@ export function HomePage() {
       </Box>
 
       {/* Fourth Row: Geographic Threat Map and Threat Categories */}
-      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6}>
+      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
         <GeographicThreatMap />
         <ThreatCategories />
       </SimpleGrid>
 
       {/* Fifth Row: MITRE ATT&CK Coverage and Recent Indicators */}
-      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6}>
+      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
         <MITREAttackCoverage />
         <RecentIndicators />
       </SimpleGrid>
 
       {/* Sixth Row: Trend Charts */}
-      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6}>
+      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
         {/* CVE Disclosure Trend Chart */}
         <Box>
-          <HStack justify="space-between" mb={3}>
+          <HStack justify="space-between" mb={2}>
             <Heading size="md" fontWeight="semibold">CVE Disclosure Trend</Heading>
             <Badge colorScheme="purple" variant="subtle">30 Days</Badge>
           </HStack>
-          <Box borderWidth="1px" borderColor="border.default" borderRadius="2xl" bg={cardBg} p={6} boxShadow="sm">
+          <Box borderWidth="1px" borderColor="border.default" borderRadius="2xl" bg={cardBg} p={4} boxShadow="sm">
             {disclosureTrend.isError && <ErrorState />}
             {disclosureTrend.isLoading ? (
               <Box h="256px">
@@ -241,11 +277,11 @@ export function HomePage() {
 
         {/* News Volume Trend */}
         <Box>
-          <HStack justify="space-between" mb={3}>
+          <HStack justify="space-between" mb={2}>
             <Heading size="md" fontWeight="semibold">News Volume Trend</Heading>
             <Badge colorScheme="cyan" variant="subtle">7 Days</Badge>
           </HStack>
-          <Box borderWidth="1px" borderColor="border.default" borderRadius="2xl" bg={cardBg} p={6} boxShadow="sm">
+          <Box borderWidth="1px" borderColor="border.default" borderRadius="2xl" bg={cardBg} p={4} boxShadow="sm">
             {newsTrend.isLoading ? (
               <Box h="200px">
                 <Skeleton h="full" />
@@ -261,19 +297,19 @@ export function HomePage() {
 
       {/* Real-time Activity Timeline: merges latest CVEs, news, and ransomware victim claims */}
       <Box>
-        <HStack spacing={2} mb={3}>
+        <HStack spacing={2} mb={2}>
           <Heading size="md" fontWeight="semibold">Recent Activity</Heading>
           <LiveIndicator lastUpdated={lastUpdated} />
         </HStack>
-        <Box borderWidth="1px" borderColor="border.default" borderRadius="2xl" bg={cardBg} p={6} boxShadow="sm">
+        <Box borderWidth="1px" borderColor="border.default" borderRadius="2xl" bg={cardBg} p={4} boxShadow="sm">
           <ActivityTimeline />
         </Box>
       </Box>
 
-      <VStack spacing={8} align="stretch">
+      <VStack spacing={4} alignItems="stretch">
         {/* Today's Critical CVEs */}
         <Box>
-          <HStack justify="space-between" mb={4}>
+          <HStack justify="space-between" mb={3}>
             <HStack spacing={2}>
               <AlertOctagon size={20} color="#dc2626" />
               <Heading size="md" fontWeight="semibold">Today's Critical CVEs</Heading>
@@ -287,13 +323,13 @@ export function HomePage() {
           </HStack>
           {criticalToday.isError && <ErrorState />}
           {criticalToday.isLoading ? (
-            <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={4}>
+            <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={3}>
               {Array.from({ length: 4 }).map((_, i) => (
                 <SkeletonCard key={i} />
               ))}
             </SimpleGrid>
           ) : criticalToday.data && criticalToday.data.data.length > 0 ? (
-            <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={4}>
+            <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={3}>
               {criticalToday.data.data.slice(0, 4).map((cve) => (
                 <CveCard key={cve.id} cve={cve} />
               ))}
@@ -315,7 +351,7 @@ export function HomePage() {
 
         {/* Trending CVEs */}
         <Box>
-          <HStack justify="space-between" mb={4}>
+          <HStack justify="space-between" mb={3}>
             <HStack spacing={2}>
               <TrendingUp size={20} color="#a78bfa" />
               <Heading size="md" fontWeight="semibold">Trending CVEs</Heading>
@@ -326,7 +362,7 @@ export function HomePage() {
           </HStack>
           {trending.isError && <ErrorState />}
           {trending.isLoading ? (
-            <HStack spacing={4} overflowX="auto" pb={2} align="stretch">
+            <HStack spacing={3} overflowX="auto" pb={2} align="stretch">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Box key={i} w="288px" flexShrink={0}>
                   <SkeletonCard />
@@ -334,7 +370,7 @@ export function HomePage() {
               ))}
             </HStack>
           ) : trending.data && trending.data.data.length > 0 ? (
-            <HStack spacing={4} overflowX="auto" pb={2} align="stretch">
+            <HStack spacing={3} overflowX="auto" pb={2} align="stretch">
               {trending.data.data.map((cve) => (
                 <Box key={cve.id} w="288px" flexShrink={0}>
                   <CveCard cve={cve} />
@@ -358,7 +394,7 @@ export function HomePage() {
 
         {/* Latest Security News */}
         <Box>
-          <HStack justify="space-between" mb={4}>
+          <HStack justify="space-between" mb={3}>
             <HStack spacing={2}>
               <Newspaper size={20} color="#22d3ee" />
               <Heading size="md" fontWeight="semibold">Latest Security News</Heading>
@@ -372,13 +408,13 @@ export function HomePage() {
           </HStack>
           {news.isError && <ErrorState />}
           {news.isLoading ? (
-            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
               {Array.from({ length: 4 }).map((_, i) => (
                 <SkeletonCard key={i} />
               ))}
             </SimpleGrid>
           ) : news.data && news.data.data.length > 0 ? (
-            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
               {news.data.data.map((article) => (
                 <NewsCard key={article.id} article={article} />
               ))}
@@ -400,7 +436,7 @@ export function HomePage() {
 
         {/* Browse by Vendor */}
         <Box>
-          <HStack justify="space-between" mb={4}>
+          <HStack justify="space-between" mb={3}>
             <HStack spacing={2}>
               <Server size={20} color="#3b82f6" />
               <Heading size="md" fontWeight="semibold">Browse by Vendor</Heading>
@@ -411,13 +447,13 @@ export function HomePage() {
           </HStack>
           {vendors.isError && <ErrorState />}
           {vendors.isLoading ? (
-            <Wrap spacing={3}>
+            <Wrap spacing={2}>
               {Array.from({ length: 8 }).map((_, i) => (
                 <Skeleton key={i} height="48px" width="140px" borderRadius="full" />
               ))}
             </Wrap>
           ) : vendors.data && vendors.data.data.length > 0 ? (
-            <Wrap spacing={3}>
+            <Wrap spacing={2}>
               {vendors.data.data.map((vendor) => (
                 <VendorChip key={vendor.vendor} vendor={vendor} />
               ))}
