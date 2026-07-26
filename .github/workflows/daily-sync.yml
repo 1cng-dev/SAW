@@ -1,0 +1,97 @@
+name: Daily Data Sync
+
+# Runs the same ingestion code the BullMQ worker uses, once a day, directly
+# against a real Postgres — independent of whether apps/worker is running
+# continuously anywhere. Requires DATABASE_URL to point at a database this
+# runner can reach (a managed/cloud Postgres, not localhost).
+on:
+  schedule:
+    - cron: "0 6 * * *" # 06:00 UTC daily
+  workflow_dispatch: {} # manual "Run workflow" button in the Actions tab
+
+concurrency:
+  group: sec1cng-daily-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply pending migrations
+        run: npm run db:migrate
+
+      - name: Sync NVD CVEs
+        id: sync_nvd
+        continue-on-error: true
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: npm run sync:nvd
+
+      - name: Sync news feeds
+        id: sync_news
+        continue-on-error: true
+        run: npm run sync:news
+
+      - name: Sync vendor advisories
+        id: sync_vendors
+        continue-on-error: true
+        run: npm run sync:vendors
+
+      - name: Sync GitHub Security Advisories
+        id: sync_ghsa
+        continue-on-error: true
+        env:
+          # Uses a dedicated secret, not the auto-provided `secrets.GITHUB_TOKEN`
+          # (that one's scope isn't guaranteed sufficient for the GHSA GraphQL
+          # query and its name is reserved — can't be overridden). Cleanly
+          # skips with a log line if this secret isn't set.
+          GITHUB_TOKEN: ${{ secrets.GHSA_PAT }}
+        run: npm run sync:ghsa
+
+      - name: Recalculate trending scores
+        id: sync_trending
+        continue-on-error: true
+        run: npm run sync:trending
+
+      - name: Sync ransomware.live data
+        id: sync_ransomware
+        if: ${{ vars.API_BASE_URL != '' }}
+        continue-on-error: true
+        # Ransomware ingestion currently lives in apps/api (not a worker CLI
+        # script — see docs/api.md's note on this), so it's triggered here via
+        # the already-deployed API's own sync endpoint rather than run
+        # standalone. Skipped entirely if API_BASE_URL isn't configured
+        # (Settings → Secrets and variables → Actions → Variables).
+        run: |
+          curl -sf -X POST "${{ vars.API_BASE_URL }}/api/ransomware/sync" \
+            -H "Content-Type: application/json" --max-time 120
+
+      - name: Fail the job if any sync step failed
+        if: always()
+        run: |
+          set -e
+          for outcome in \
+            "${{ steps.sync_nvd.outcome }}" \
+            "${{ steps.sync_news.outcome }}" \
+            "${{ steps.sync_vendors.outcome }}" \
+            "${{ steps.sync_ghsa.outcome }}" \
+            "${{ steps.sync_trending.outcome }}" \
+            "${{ steps.sync_ransomware.outcome }}"; do
+            if [ "$outcome" = "failure" ]; then
+              echo "One or more sync steps failed — see logs above." >&2
+              exit 1
+            fi
+          done

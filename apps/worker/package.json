@@ -8,7 +8,9 @@
     "start": "tsx src/index.ts",
     "sync:nvd": "tsx src/scripts/pull-nvd-recent.ts",
     "sync:news": "tsx src/scripts/pull-news.ts",
-    "sync:vendors": "tsx src/scripts/pull-vendor-advisories.ts"
+    "sync:vendors": "tsx src/scripts/pull-vendor-advisories.ts",
+    "sync:ghsa": "tsx src/scripts/pull-ghsa.ts",
+    "sync:trending": "tsx src/scripts/pull-trending.ts"
   },
   "dependencies": {
     "@sec1cng/db": "*",

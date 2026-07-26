@@ -15,7 +15,10 @@
     "dev:web": "npm run dev -w @sec1cng/web",
     "sync:nvd": "npm run sync:nvd -w @sec1cng/worker",
     "sync:news": "npm run sync:news -w @sec1cng/worker",
-    "sync:vendors": "npm run sync:vendors -w @sec1cng/worker"
+    "sync:vendors": "npm run sync:vendors -w @sec1cng/worker",
+    "sync:ghsa": "npm run sync:ghsa -w @sec1cng/worker",
+    "sync:trending": "npm run sync:trending -w @sec1cng/worker",
+    "sync:all": "npm run sync:nvd && npm run sync:news && npm run sync:vendors && npm run sync:ghsa && npm run sync:trending"
   },
   "devDependencies": {
     "typescript": "^5.6.3",

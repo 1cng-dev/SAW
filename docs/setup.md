@@ -116,6 +116,33 @@ Any unreachable source is logged explicitly — nothing falls back to placeholde
   CSAF/ROLIE JSON. Not included in `VENDOR_FEEDS` (`packages/shared/src/constants.ts`) — would
   need a dedicated CSAF-aware ingestion module to add.
 
+## Daily sync via GitHub Actions
+
+`.github/workflows/daily-sync.yml` runs every job once a day (`06:00 UTC` cron, plus a manual
+"Run workflow" button) by executing the exact same scripts as `npm run sync:*` above — no BullMQ
+worker or deployed API needs to be running for CVEs/news/vendors/GHSA/trending. This is a
+complement to, not a replacement for, the continuously-running worker: use it as a safety net for
+deployments where `apps/worker` isn't kept running 24/7, or just as a second guarantee.
+
+**Required repo secret:**
+
+| Secret | Required? | Notes |
+|---|---|---|
+| `DATABASE_URL` | yes | Must be reachable from GitHub-hosted runners — a managed/cloud Postgres, not `localhost`. Include `?sslmode=require` (or your provider's equivalent) if it requires TLS. |
+| `NVD_API_KEY` | no | Same effect as locally — unauthenticated rate limit if unset. |
+| `GHSA_PAT` | no | A GitHub personal access token for the GHSA sync step specifically. **Not** the same as GitHub Actions' own auto-provided `secrets.GITHUB_TOKEN`, whose name is reserved and whose scope isn't guaranteed sufficient for the securityAdvisories GraphQL query — this workflow maps `GHSA_PAT` to the `GITHUB_TOKEN` env var our code actually reads. |
+
+**Optional repo variable** (Settings → Secrets and variables → Actions → Variables, not Secrets,
+since it's just a URL):
+
+| Variable | Effect |
+|---|---|
+| `API_BASE_URL` | If set (e.g. `https://sec1cng.example.com`), the workflow also `POST`s to `{API_BASE_URL}/api/ransomware/sync` on your deployed API. Ransomware ingestion currently only exists as an API-triggered sync (see [api.md](./api.md#ransomware-routesransomwarets)), not a standalone worker script, so this step needs a live, reachable deployment — it's skipped entirely if unset. |
+
+Each sync step runs independently (`continue-on-error: true`) so one failing source (e.g.
+SecurityWeek's 403) doesn't block the others; the job as a whole still fails at the end if any
+step failed, so CI status stays honest.
+
 ## Docker Compose (full stack)
 
 ```bash
