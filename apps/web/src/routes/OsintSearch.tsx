@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
   Box,
   Heading,
@@ -20,9 +21,11 @@ import {
   Wrap,
   WrapItem,
   Skeleton,
+  useToast,
 } from "@chakra-ui/react";
-import { Search, Globe2, Network, Fingerprint, Radar, Download, MapPin } from "lucide-react";
+import { Search, Globe2, Network, Fingerprint, Radar, Download, MapPin, Bookmark } from "lucide-react";
 import { useOsintAggregate } from "../hooks/useOsintAggregate";
+import { useSearchHistory } from "../hooks/useSearchHistory";
 import { AdditionalSourcesPanel } from "../components/osint/AdditionalSourcesPanel";
 
 const EXAMPLES: { type: string; value: string; hint: string }[] = [
@@ -43,8 +46,12 @@ function freshnessColor(responded: number, total: number) {
 }
 
 export function OsintSearchPage() {
-  const [input, setInput] = useState("");
-  const [query, setQuery] = useState("");
+  const search = useSearch({ strict: false }) as { q?: string };
+  const navigate = useNavigate();
+  const toast = useToast();
+  const { logSearch, saveSearch } = useSearchHistory();
+  const [input, setInput] = useState(search.q ?? "");
+  const [query, setQuery] = useState(search.q ?? "");
   const [isLoadingMyIp, setIsLoadingMyIp] = useState(false);
   const [myIpError, setMyIpError] = useState<string | null>(null);
   const state = useOsintAggregate(query);
@@ -53,14 +60,20 @@ export function OsintSearchPage() {
   const rdap = state.results.RDAP;
   const rdapData = rdap?.status === "ok" ? (rdap.data as any) : null;
 
+  const runSearch = (value: string) => {
+    setQuery(value);
+    logSearch("osint", value);
+    navigate({ to: "/osint", search: { q: value } });
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.trim()) setQuery(input.trim());
+    if (input.trim()) runSearch(input.trim());
   };
 
   const runExample = (value: string) => {
     setInput(value);
-    setQuery(value);
+    runSearch(value);
   };
 
   const handleMyIp = async () => {
@@ -134,6 +147,19 @@ export function OsintSearchPage() {
             <MapPin size={18} />
             <Text ml={2} display={{ base: "none", md: "inline" }}>My IP</Text>
           </Button>
+          {query && (
+            <Button
+              size="lg"
+              variant="outline"
+              leftIcon={<Bookmark size={16} />}
+              onClick={() => {
+                saveSearch("osint", query);
+                toast({ title: "Search saved", status: "success", duration: 1500 });
+              }}
+            >
+              Save
+            </Button>
+          )}
         </HStack>
         {myIpError && <Text fontSize="xs" color="severity.critical.500" mt={2}>{myIpError}</Text>}
       </Box>

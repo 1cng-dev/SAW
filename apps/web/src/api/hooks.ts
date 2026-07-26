@@ -1,7 +1,24 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { StatsResponse, SyncStatusEntry } from "@sec1cng/shared";
-import { apiFetch } from "./client";
-import type { Cve, NewsArticle, Paginated, VendorSummary } from "./types";
+import { apiFetch, apiMutate } from "./client";
+import type {
+  AlertRule,
+  Asset,
+  AssetSummary,
+  ComplianceFrameworkStatus,
+  Cve,
+  DarkWebKeyword,
+  DarkWebMatch,
+  Incident,
+  IncidentComment,
+  NewsArticle,
+  Paginated,
+  PatchTask,
+  PhishingScanResult,
+  PhishingWatch,
+  TeamUser,
+  VendorSummary,
+} from "./types";
 
 export interface CveFilters {
   ids?: string;
@@ -139,6 +156,23 @@ export function useIngestionActivity(hours = 24) {
     queryKey: ["ingestion-activity", hours],
     queryFn: () => apiFetch<{ data: IngestionActivityPoint[] }>("/api/stats/ingestion-activity", { hours }),
     refetchInterval: 60_000,
+  });
+}
+
+export interface MalwareLookupResult {
+  hash: string;
+  status: "malicious" | "unknown" | "not_configured";
+  source: string;
+  message?: string;
+  data?: { fileType: string; fileName: string; signature: string; tags: string[]; firstSeen: string; fileSize: number } | null;
+}
+
+export function useMalwareLookup(hash: string) {
+  return useQuery({
+    queryKey: ["malware-lookup", hash],
+    queryFn: () => apiFetch<MalwareLookupResult>("/api/malware/lookup", { hash }),
+    enabled: hash.length > 0,
+    retry: false,
   });
 }
 
@@ -300,5 +334,316 @@ export function useRecentRansomwareIocs(limit = 20) {
         { limit },
       ),
     refetchInterval: 60_000,
+  });
+}
+
+export function useAssets() {
+  return useQuery({
+    queryKey: ["assets"],
+    queryFn: () => apiFetch<{ data: Asset[] }>("/api/assets"),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useAssetSummary() {
+  return useQuery({
+    queryKey: ["assets-summary"],
+    queryFn: () => apiFetch<AssetSummary>("/api/assets/summary"),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useAsset(id: string | undefined) {
+  return useQuery({
+    queryKey: ["asset", id],
+    queryFn: () => apiFetch<{ data: Asset; matchedCves: Cve[] }>(`/api/assets/${id}`),
+    enabled: Boolean(id),
+  });
+}
+
+export function useCreateAsset() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { assetType: string; name: string; value: string; version?: string; notes?: string }) =>
+      apiMutate<{ data: Asset }>("/api/assets", "POST", body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
+      queryClient.invalidateQueries({ queryKey: ["assets-summary"] });
+    },
+  });
+}
+
+export function useDeleteAsset() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiMutate<void>(`/api/assets/${id}`, "DELETE"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
+      queryClient.invalidateQueries({ queryKey: ["assets-summary"] });
+    },
+  });
+}
+
+export function useRematchAsset() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiMutate<{ data: Asset }>(`/api/assets/${id}/rematch`, "POST"),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
+      queryClient.invalidateQueries({ queryKey: ["assets-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["asset", id] });
+    },
+  });
+}
+
+export function useIncidents() {
+  return useQuery({
+    queryKey: ["incidents"],
+    queryFn: () => apiFetch<{ data: Incident[] }>("/api/incidents"),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useIncident(id: string | undefined) {
+  return useQuery({
+    queryKey: ["incident", id],
+    queryFn: () => apiFetch<{ data: Incident; comments: IncidentComment[] }>(`/api/incidents/${id}`),
+    enabled: Boolean(id),
+  });
+}
+
+export function useCreateIncident() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { title: string; description?: string; severity?: string; assignee?: string }) =>
+      apiMutate<{ data: Incident }>("/api/incidents", "POST", body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["incidents"] }),
+  });
+}
+
+export function useUpdateIncident() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string } & Partial<Incident>) =>
+      apiMutate<{ data: Incident }>(`/api/incidents/${id}`, "PATCH", body),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["incidents"] });
+      queryClient.invalidateQueries({ queryKey: ["incident", variables.id] });
+    },
+  });
+}
+
+export function useDeleteIncident() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiMutate<void>(`/api/incidents/${id}`, "DELETE"),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["incidents"] }),
+  });
+}
+
+export function useAddIncidentComment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ incidentId, author, body }: { incidentId: string; author?: string; body: string }) =>
+      apiMutate<{ data: IncidentComment }>(`/api/incidents/${incidentId}/comments`, "POST", { author, body }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["incident", variables.incidentId] });
+    },
+  });
+}
+
+export function usePatchTasks() {
+  return useQuery({
+    queryKey: ["patch-tasks"],
+    queryFn: () => apiFetch<{ data: PatchTask[] }>("/api/patch-tasks"),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useCreatePatchTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { cveId?: string; assetId?: string; status?: string; dueDate?: string; notes?: string }) =>
+      apiMutate<{ data: PatchTask }>("/api/patch-tasks", "POST", body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["patch-tasks"] }),
+  });
+}
+
+export function useUpdatePatchTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; status?: string; dueDate?: string | null; notes?: string }) =>
+      apiMutate<{ data: PatchTask }>(`/api/patch-tasks/${id}`, "PATCH", body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["patch-tasks"] }),
+  });
+}
+
+export function useDeletePatchTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiMutate<void>(`/api/patch-tasks/${id}`, "DELETE"),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["patch-tasks"] }),
+  });
+}
+
+export function useDarkWebKeywords() {
+  return useQuery({
+    queryKey: ["darkweb-keywords"],
+    queryFn: () => apiFetch<{ data: DarkWebKeyword[] }>("/api/darkweb/keywords"),
+  });
+}
+
+export function useDarkWebMatches() {
+  return useQuery({
+    queryKey: ["darkweb-matches"],
+    queryFn: () =>
+      apiFetch<{ data: DarkWebMatch[]; keywordCount: number; sourcesUsed: { name: string; isSample: boolean }[] }>(
+        "/api/darkweb/matches"
+      ),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useAddDarkWebKeyword() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (keyword: string) => apiMutate<{ data: DarkWebKeyword }>("/api/darkweb/keywords", "POST", { keyword }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["darkweb-keywords"] });
+      queryClient.invalidateQueries({ queryKey: ["darkweb-matches"] });
+    },
+  });
+}
+
+export function useDeleteDarkWebKeyword() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiMutate<void>(`/api/darkweb/keywords/${id}`, "DELETE"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["darkweb-keywords"] });
+      queryClient.invalidateQueries({ queryKey: ["darkweb-matches"] });
+    },
+  });
+}
+
+export function usePhishingWatches() {
+  return useQuery({
+    queryKey: ["phishing-watches"],
+    queryFn: () => apiFetch<{ data: PhishingWatch[] }>("/api/phishing/watches"),
+  });
+}
+
+export function usePhishingResults(watchId: string | undefined) {
+  return useQuery({
+    queryKey: ["phishing-results", watchId],
+    queryFn: () => apiFetch<{ data: PhishingScanResult[] }>(`/api/phishing/watches/${watchId}/results`),
+    enabled: Boolean(watchId),
+  });
+}
+
+export function useCreatePhishingWatch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (domain: string) =>
+      apiMutate<{ data: PhishingWatch; results: PhishingScanResult[] }>("/api/phishing/watches", "POST", { domain }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["phishing-watches"] }),
+  });
+}
+
+export function useRescanPhishingWatch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiMutate<{ data: PhishingScanResult[] }>(`/api/phishing/watches/${id}/rescan`, "POST"),
+    onSuccess: (_data, id) => queryClient.invalidateQueries({ queryKey: ["phishing-results", id] }),
+  });
+}
+
+export function useDeletePhishingWatch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiMutate<void>(`/api/phishing/watches/${id}`, "DELETE"),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["phishing-watches"] }),
+  });
+}
+
+export function useCompliance() {
+  return useQuery({
+    queryKey: ["compliance"],
+    queryFn: () => apiFetch<{ data: ComplianceFrameworkStatus[] }>("/api/compliance"),
+  });
+}
+
+export function useSetComplianceControl() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ framework, controlId, completed }: { framework: string; controlId: string; completed: boolean }) =>
+      apiMutate(`/api/compliance/${framework}/${controlId}`, "PUT", { completed }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["compliance"] }),
+  });
+}
+
+export function useAlertRules() {
+  return useQuery({
+    queryKey: ["alert-rules"],
+    queryFn: () => apiFetch<{ data: AlertRule[] }>("/api/alert-rules"),
+  });
+}
+
+export function useCreateAlertRule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { triggerType: string; channel: string; destination: string }) =>
+      apiMutate<{ data: AlertRule }>("/api/alert-rules", "POST", body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["alert-rules"] }),
+  });
+}
+
+export function useToggleAlertRule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
+      apiMutate<{ data: AlertRule }>(`/api/alert-rules/${id}`, "PATCH", { enabled }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["alert-rules"] }),
+  });
+}
+
+export function useDeleteAlertRule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiMutate<void>(`/api/alert-rules/${id}`, "DELETE"),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["alert-rules"] }),
+  });
+}
+
+export function useTeamUsers() {
+  return useQuery({
+    queryKey: ["team-users"],
+    queryFn: () => apiFetch<{ data: TeamUser[] }>("/api/team-users"),
+  });
+}
+
+export function useCreateTeamUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { name: string; email: string; role: string }) =>
+      apiMutate<{ data: TeamUser }>("/api/team-users", "POST", body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["team-users"] }),
+  });
+}
+
+export function useUpdateTeamUserRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, role }: { id: string; role: string }) =>
+      apiMutate<{ data: TeamUser }>(`/api/team-users/${id}`, "PATCH", { role }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["team-users"] }),
+  });
+}
+
+export function useDeleteTeamUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiMutate<void>(`/api/team-users/${id}`, "DELETE"),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["team-users"] }),
   });
 }

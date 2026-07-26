@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Box, Heading, Text, Input, Button, VStack, HStack, Badge, SimpleGrid, Alert, AlertIcon, AlertTitle, AlertDescription, Code, Link, Flex, useColorModeValue, Divider, Wrap, WrapItem } from "@chakra-ui/react";
-import { Search, Shield, AlertTriangle, CheckCircle, HelpCircle, ExternalLink, Radar, Globe, Lock, Activity } from "lucide-react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { Box, Heading, Text, Input, Button, VStack, HStack, Badge, SimpleGrid, Alert, AlertIcon, AlertTitle, AlertDescription, Code, Link, Flex, useColorModeValue, Divider, Wrap, WrapItem, useToast } from "@chakra-ui/react";
+import { Search, Shield, AlertTriangle, CheckCircle, HelpCircle, ExternalLink, Radar, Globe, Lock, Activity, Bookmark } from "lucide-react";
 import { useThreatIntelLookup } from "../api/hooks";
+import { useSearchHistory } from "../hooks/useSearchHistory";
 import { ExternalApiResultTable } from "../components/threatintel/ExternalApiResultTable";
 
 const EXAMPLES: { type: string; value: string }[] = [
@@ -12,20 +14,28 @@ const EXAMPLES: { type: string; value: string }[] = [
 ];
 
 export function ThreatIntelPage() {
-  const [indicator, setIndicator] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+  const search = useSearch({ strict: false }) as { q?: string };
+  const navigate = useNavigate();
+  const toast = useToast();
+  const { logSearch, saveSearch } = useSearchHistory();
+  const [indicator, setIndicator] = useState(search.q ?? "");
+  const [searchQuery, setSearchQuery] = useState(search.q ?? "");
   const { data, isLoading, isError, error } = useThreatIntelLookup(searchQuery);
+
+  const runSearch = (value: string) => {
+    setSearchQuery(value);
+    logSearch("threat-intel", value);
+    navigate({ to: "/threat-intel", search: { q: value } });
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (indicator.trim()) {
-      setSearchQuery(indicator.trim());
-    }
+    if (indicator.trim()) runSearch(indicator.trim());
   };
 
   const runExample = (value: string) => {
     setIndicator(value);
-    setSearchQuery(value);
+    runSearch(value);
   };
 
   const getVerdictColor = (verdict: string) => {
@@ -111,6 +121,19 @@ export function ThreatIntelPage() {
           <Button type="submit" size="lg" colorScheme="orange" isLoading={isLoading}>
             <Search size={18} />
           </Button>
+          {searchQuery && (
+            <Button
+              size="lg"
+              variant="outline"
+              leftIcon={<Bookmark size={16} />}
+              onClick={() => {
+                saveSearch("threat-intel", searchQuery);
+                toast({ title: "Search saved", status: "success", duration: 1500 });
+              }}
+            >
+              Save
+            </Button>
+          )}
         </HStack>
       </Box>
 

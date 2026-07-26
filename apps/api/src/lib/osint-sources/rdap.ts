@@ -8,7 +8,7 @@ export function detectQueryType(query: string): OsintQueryType | null {
   return null;
 }
 
-async function fetchRdap(path: string) {
+export async function fetchRdap(path: string) {
   const response = await fetchWithTimeout(`https://rdap.org/${path}`, { headers: { Accept: "application/rdap+json" } }, 15000);
   if (!response.ok) return null;
   return response.json();

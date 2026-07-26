@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Box, Flex, IconButton, Input, InputGroup, InputLeftElement, HStack, Text } from "@chakra-ui/react";
-import { Menu, Search, Shield, Bell } from "lucide-react";
+import { Box, Flex, IconButton, Image, Input, InputGroup, InputLeftElement, HStack, Text } from "@chakra-ui/react";
+import { Menu, Search, Bell } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useSyncStatus } from "../../api/hooks";
 import { SyncStatus } from "../ui/SyncStatus";
@@ -54,7 +54,7 @@ export function TopBar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
             _hover={{ color: "accent.400", bg: "charcoal.800" }}
           />
           <HStack spacing={2} display={{ base: "none", md: "flex" }}>
-            <Shield size={24} color="#f97316" />
+            <Image src="https://1cloudng.com/assets/logo-FdfyqxLo.png" alt="1CNG" h="24px" w="auto" />
             <Text fontSize="lg" fontWeight="bold" color="accent.400">
               1CNG Security Advisory
             </Text>

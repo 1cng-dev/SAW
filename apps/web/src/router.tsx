@@ -12,6 +12,19 @@ import { RansomwareTrackerPage } from "./routes/RansomwareTracker";
 import { AnnouncementsPage } from "./routes/Announcements";
 import { ThreatIntelPage } from "./routes/ThreatIntel";
 import { OsintSearchPage } from "./routes/OsintSearch";
+import { AssetInventoryPage } from "./routes/AssetInventory";
+import { AssetDetailPage } from "./routes/AssetDetail";
+import { IncidentsPage } from "./routes/Incidents";
+import { IncidentDetailPage } from "./routes/IncidentDetail";
+import { PatchManagementPage } from "./routes/PatchManagement";
+import { DarkWebMonitoringPage } from "./routes/DarkWebMonitoring";
+import { PhishingWatchPage } from "./routes/PhishingWatch";
+import { MalwareAnalysisPage } from "./routes/MalwareAnalysis";
+import { CompliancePage } from "./routes/Compliance";
+import { NotificationSettingsPage } from "./routes/NotificationSettings";
+import { TeamManagementPage } from "./routes/TeamManagement";
+import { ApiDocsPage } from "./routes/ApiDocs";
+import { SearchHistoryPage } from "./routes/SearchHistory";
 import { WatchlistPage } from "./routes/Watchlist";
 import { AttackMapPage } from "./routes/AttackMap";
 import { DigestPage } from "./routes/Digest";
@@ -76,16 +89,98 @@ const announcementsRoute = createRoute({
   component: AnnouncementsPage,
 });
 
+const querySearchSchema = z.object({ q: z.string().optional() });
+
 const threatIntelRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/threat-intel",
+  validateSearch: querySearchSchema,
   component: ThreatIntelPage,
+});
+
+const assetInventoryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/assets",
+  component: AssetInventoryPage,
+});
+
+const assetDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/assets/$assetId",
+  component: AssetDetailPage,
+});
+
+const incidentsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/incidents",
+  component: IncidentsPage,
+});
+
+const incidentDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/incidents/$incidentId",
+  component: IncidentDetailPage,
+});
+
+const patchManagementRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/patch-management",
+  component: PatchManagementPage,
+});
+
+const darkWebMonitoringRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/dark-web-monitoring",
+  component: DarkWebMonitoringPage,
+});
+
+const phishingWatchRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/phishing-watch",
+  component: PhishingWatchPage,
+});
+
+const malwareAnalysisRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/malware-analysis",
+  component: MalwareAnalysisPage,
 });
 
 const osintSearchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/osint",
+  validateSearch: querySearchSchema,
   component: OsintSearchPage,
+});
+
+const complianceRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/compliance",
+  component: CompliancePage,
+});
+
+const notificationSettingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/notification-settings",
+  component: NotificationSettingsPage,
+});
+
+const teamManagementRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/team",
+  component: TeamManagementPage,
+});
+
+const apiDocsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/developer-docs",
+  component: ApiDocsPage,
+});
+
+const searchHistoryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/search-history",
+  component: SearchHistoryPage,
 });
 
 const watchlistRoute = createRoute({
@@ -124,6 +219,19 @@ const routeTree = rootRoute.addChildren([
   announcementsRoute,
   threatIntelRoute,
   osintSearchRoute,
+  assetInventoryRoute,
+  assetDetailRoute,
+  incidentsRoute,
+  incidentDetailRoute,
+  patchManagementRoute,
+  darkWebMonitoringRoute,
+  phishingWatchRoute,
+  malwareAnalysisRoute,
+  complianceRoute,
+  notificationSettingsRoute,
+  teamManagementRoute,
+  apiDocsRoute,
+  searchHistoryRoute,
   watchlistRoute,
   attackMapRoute,
   digestRoute,

@@ -21,6 +21,7 @@ import {
 } from "@chakra-ui/react";
 import { Download, ShieldCheck, AlertOctagon, Activity, Skull, TrendingUp, Clock, Target, Search, LayoutGrid, Table, X } from "lucide-react";
 import { useCves, useStats, useCveBreakdown, useVendors, type CveFilters } from "../api/hooks";
+import { useSearchHistory } from "../hooks/useSearchHistory";
 import { CveFilterBar } from "../components/cves/CveFilterBar";
 import { CveTable } from "../components/cves/CveTable";
 import { CveCardView } from "../components/cves/CveCardView";
@@ -28,6 +29,7 @@ import { ErrorState } from "../components/ui/ErrorState";
 
 export function CvesListPage() {
   const search = useSearch({ from: "/cves" });
+  const { logSearch } = useSearchHistory();
   const [filters, setFilters] = useState<Partial<CveFilters>>({});
   const [page, setPage] = useState(1);
   const [sorting, setSorting] = useState<SortingState>([{ id: "publishedDate", desc: true }]);
@@ -102,6 +104,8 @@ export function CvesListPage() {
                 placeholder="Search CVEs..."
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
+                onBlur={() => searchQuery.trim() && logSearch("cves", searchQuery.trim())}
+                onKeyDown={(e) => e.key === "Enter" && searchQuery.trim() && logSearch("cves", searchQuery.trim())}
                 bg={inputBg}
                 borderColor="border.default"
                 _focus={{ borderColor: "accent.400" }}
