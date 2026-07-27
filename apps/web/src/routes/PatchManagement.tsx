@@ -38,9 +38,9 @@ import {
   Progress,
 } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
-import { Plus, AlertTriangle, Package, Clock, CheckCircle, Grid, List, Wrench, Calendar } from "lucide-react";
+import { Plus, AlertTriangle, Package, Clock, CheckCircle, Grid, List, Wrench, Calendar, Trash2 } from "lucide-react";
 import { SeverityBadge } from "../components/cves/SeverityBadge";
-import { usePatchTasks, useCreatePatchTask, useUpdatePatchTask, useAssets } from "../api/hooks";
+import { usePatchTasks, useCreatePatchTask, useUpdatePatchTask, useDeletePatchTask, useAssets } from "../api/hooks";
 import type { PatchStatus } from "../api/types";
 
 const STATUS_LABELS: Record<PatchStatus, string> = {
@@ -71,6 +71,7 @@ export function PatchManagementPage() {
   const assets = useAssets();
   const createTask = useCreatePatchTask();
   const updateTask = useUpdatePatchTask();
+  const deleteTask = useDeletePatchTask();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
 
@@ -262,7 +263,7 @@ export function PatchManagementPage() {
                 <Th>Severity</Th>
                 <Th>Status</Th>
                 <Th>Days Since Disclosure</Th>
-                <th>Due Date</th>
+                <Th>Due Date</Th>
                 <Th textAlign="right">Actions</Th>
               </Tr>
             </Thead>
@@ -308,15 +309,14 @@ export function PatchManagementPage() {
                     </Td>
                     <Td textAlign="right">
                       <HStack spacing={2} justify="flex-end">
-                        <Select 
-                          size="xs" 
-                          w="120px" 
-                          value={task.status} 
-                          borderColor={`${STATUS_COLORS[task.status]}.500`} 
-                          onChange={(e) => updateTask.mutate({ id: task.id, status: e.target.value })}
-                        >
-                          {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                        </Select>
+                        <IconButton
+                          aria-label="Delete task"
+                          icon={<Trash2 size={14} />}
+                          size="xs"
+                          variant="ghost"
+                          colorScheme="red"
+                          onClick={() => deleteTask.mutate(task.id)}
+                        />
                       </HStack>
                     </Td>
                   </Tr>

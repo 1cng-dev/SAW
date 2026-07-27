@@ -1,7 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { darkWebKeywords } from "@sec1cng/db";
-import { DARKWEB_SOURCES } from "../lib/darkweb-sources";
+import { getDarkWebSources, type DarkWebSourceStatus } from "../lib/darkweb-sources";
 
 export function registerDarkWebRoutes(app: FastifyInstance) {
   app.get("/api/darkweb/keywords", async (_request, reply) => {
@@ -25,16 +25,51 @@ export function registerDarkWebRoutes(app: FastifyInstance) {
 
   app.get("/api/darkweb/matches", async (_request, reply) => {
     const keywords = await app.db.select().from(darkWebKeywords);
-    if (keywords.length === 0) return reply.send({ data: [], keywordCount: 0, sourcesUsed: [] });
+    const sources = getDarkWebSources(app);
+
+    if (keywords.length === 0) {
+      return reply.send({
+        data: [],
+        keywordCount: 0,
+        sources: sources.map((s) => ({ source: s.name, isSample: s.isSample, status: "ok" as const, lastSyncedAt: new Date().toISOString(), matches: [] })),
+      });
+    }
 
     const keywordStrings = keywords.map((k) => k.keyword);
-    const resultsBySource = await Promise.all(DARKWEB_SOURCES.map((source) => source.search(keywordStrings)));
-    const data = resultsBySource.flat().sort((a, b) => new Date(b.dateFound).getTime() - new Date(a.dateFound).getTime());
+    const settled = await Promise.allSettled(sources.map((source) => source.search(keywordStrings)));
+
+    const sourceStatuses: DarkWebSourceStatus[] = settled.map((result, i) => {
+      const source = sources[i];
+      const lastSyncedAt = new Date().toISOString();
+      if (result.status === "rejected") {
+        return {
+          source: source.name,
+          isSample: source.isSample,
+          status: "unavailable",
+          lastSyncedAt,
+          matches: [],
+          error: result.reason instanceof Error ? result.reason.message : "Source unavailable",
+        };
+      }
+      if (result.value.notConfigured) {
+        return {
+          source: source.name,
+          isSample: source.isSample,
+          status: "not_configured",
+          lastSyncedAt,
+          matches: [],
+          error: result.value.notConfiguredMessage,
+        };
+      }
+      return { source: source.name, isSample: source.isSample, status: "ok", lastSyncedAt, matches: result.value.matches };
+    });
+
+    const allMatches = sourceStatuses.flatMap((s) => s.matches).sort((a, b) => new Date(b.dateFound).getTime() - new Date(a.dateFound).getTime());
 
     return reply.send({
-      data,
+      data: allMatches,
       keywordCount: keywords.length,
-      sourcesUsed: DARKWEB_SOURCES.map((s) => ({ name: s.name, isSample: s.isSample })),
+      sources: sourceStatuses.map((s) => ({ source: s.source, isSample: s.isSample, status: s.status, lastSyncedAt: s.lastSyncedAt, error: s.error })),
     });
   });
 }

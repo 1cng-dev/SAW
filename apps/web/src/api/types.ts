@@ -119,11 +119,15 @@ export interface PhishingScanResult {
   scannedAt: string;
 }
 
+export type ComplianceControlStatus = "incomplete" | "complete" | "not_applicable";
+
 export interface ComplianceControl {
   id: string;
   title: string;
   category: string;
-  completed: boolean;
+  status: ComplianceControlStatus;
+  notes: string | null;
+  updatedAt: string | null;
 }
 
 export interface ComplianceFrameworkStatus {
@@ -131,6 +135,7 @@ export interface ComplianceFrameworkStatus {
   name: string;
   controls: ComplianceControl[];
   completedCount: number;
+  notApplicableCount: number;
   totalCount: number;
   progressPct: number;
 }

@@ -43,12 +43,33 @@ function WatchResults({ watchId }: { watchId: string }) {
   const rescan = useRescanPhishingWatch();
 
   if (results.isLoading) return <Skeleton h="150px" />;
+  if (results.isError) {
+    return (
+      <Alert status="error" fontSize="sm">
+        <AlertIcon />
+        Failed to load scan results.
+        <Button size="xs" ml={3} onClick={() => results.refetch()}>Retry</Button>
+      </Alert>
+    );
+  }
   const rows = results.data?.data ?? [];
   const registered = rows.filter((r) => r.isRegistered);
+  const lastSynced = rows.length > 0 ? rows.map((r) => r.scannedAt).sort().at(-1) : null;
+
+  if (rows.length === 0) {
+    return (
+      <Box>
+        <Text fontSize="sm" color="text.muted" mb={3}>No scan results yet.</Text>
+        <Button size="xs" leftIcon={<RefreshCw size={12} />} variant="outline" onClick={() => rescan.mutate(watchId)} isLoading={rescan.isPending}>
+          Scan Now
+        </Button>
+      </Box>
+    );
+  }
 
   return (
     <Box>
-      <HStack justify="space-between" mb={3}>
+      <HStack justify="space-between" mb={1}>
         <Text fontSize="sm" color="text.muted">
           {rows.length} variation{rows.length === 1 ? "" : "s"} checked via RDAP &middot; {registered.length} registered
         </Text>
@@ -56,6 +77,11 @@ function WatchResults({ watchId }: { watchId: string }) {
           Rescan
         </Button>
       </HStack>
+      {lastSynced && (
+        <Text fontSize="xs" color="text.muted" mb={3}>
+          Last synced: {new Date(lastSynced).toLocaleString()}
+        </Text>
+      )}
       {registered.length > 0 && (
         <Alert status="error" mb={3} fontSize="sm">
           <AlertIcon />

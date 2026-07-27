@@ -75,6 +75,11 @@ export function registerPhishingRoutes(app: FastifyInstance) {
     const [watch] = await app.db.select().from(phishingWatches).where(eq(phishingWatches.id, id));
     if (!watch) return reply.status(404).send({ error: "Watch not found" });
 
+    // A watch shows its current snapshot, not accumulated scan history —
+    // clear prior results before inserting the fresh batch so rescans don't
+    // pile up duplicate rows indefinitely.
+    await app.db.delete(phishingScanResults).where(eq(phishingScanResults.watchId, id));
+
     const variations = generateTypoVariations(watch.domain);
     const results = await scanVariations(app, id, variations);
     return reply.send({ data: results });

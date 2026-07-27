@@ -159,12 +159,18 @@ export function useIngestionActivity(hours = 24) {
   });
 }
 
+export interface MalwareSourceResult {
+  source: string;
+  status: "malicious" | "clean" | "unknown" | "not_configured" | "rate_limited" | "error";
+  data?: any;
+  message?: string;
+  retryAfterSeconds?: number;
+}
+
 export interface MalwareLookupResult {
   hash: string;
-  status: "malicious" | "unknown" | "not_configured";
-  source: string;
-  message?: string;
-  data?: { fileType: string; fileName: string; signature: string; tags: string[]; firstSeen: string; fileSize: number } | null;
+  checkedAt: string;
+  sources: MalwareSourceResult[];
 }
 
 export function useMalwareLookup(hash: string) {
@@ -493,13 +499,19 @@ export function useDarkWebKeywords() {
   });
 }
 
+export interface DarkWebSourceInfo {
+  source: string;
+  isSample: boolean;
+  status: "ok" | "unavailable" | "not_configured";
+  lastSyncedAt: string;
+  error?: string;
+}
+
 export function useDarkWebMatches() {
   return useQuery({
     queryKey: ["darkweb-matches"],
     queryFn: () =>
-      apiFetch<{ data: DarkWebMatch[]; keywordCount: number; sourcesUsed: { name: string; isSample: boolean }[] }>(
-        "/api/darkweb/matches"
-      ),
+      apiFetch<{ data: DarkWebMatch[]; keywordCount: number; sources: DarkWebSourceInfo[] }>("/api/darkweb/matches"),
     refetchInterval: 60_000,
   });
 }
@@ -576,8 +588,8 @@ export function useCompliance() {
 export function useSetComplianceControl() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ framework, controlId, completed }: { framework: string; controlId: string; completed: boolean }) =>
-      apiMutate(`/api/compliance/${framework}/${controlId}`, "PUT", { completed }),
+    mutationFn: ({ framework, controlId, status, notes }: { framework: string; controlId: string; status?: string; notes?: string }) =>
+      apiMutate(`/api/compliance/${framework}/${controlId}`, "PUT", { status, notes }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["compliance"] }),
   });
 }
