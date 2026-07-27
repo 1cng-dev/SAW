@@ -14,6 +14,8 @@ import {
   Button,
   IconButton,
   Input,
+  InputGroup,
+  InputLeftElement,
   Select,
   HStack,
   VStack,
@@ -31,9 +33,14 @@ import {
   Alert,
   AlertIcon,
   Skeleton,
+  useColorModeValue,
+  Flex,
+  Divider,
+  Tooltip,
+  Textarea,
 } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
-import { Server, Globe, Package, Plus, Trash2, RefreshCw, ShieldAlert } from "lucide-react";
+import { Server, Globe, Package, Plus, Trash2, RefreshCw, ShieldAlert, Grid, List, Search, Eye } from "lucide-react";
 import { StatCard } from "../components/ui/StatCard";
 import { useAssets, useAssetSummary, useCreateAsset, useDeleteAsset, useRematchAsset } from "../api/hooks";
 import type { Asset } from "../api/types";
@@ -46,10 +53,15 @@ export function AssetInventoryPage() {
   const createAsset = useCreateAsset();
   const deleteAsset = useDeleteAsset();
   const rematchAsset = useRematchAsset();
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isAddModalOpen, onOpen: onAddModalOpen, onClose: onAddModalClose } = useDisclosure();
+  const { isOpen: isDetailModalOpen, onOpen: onDetailModalOpen, onClose: onDetailModalClose } = useDisclosure();
   const toast = useToast();
+  const cardBg = useColorModeValue("white", "charcoal.800");
 
   const [form, setForm] = useState({ assetType: "software", name: "", value: "", version: "", notes: "" });
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleCreate = () => {
     if (!form.name.trim() || !form.value.trim()) {
@@ -60,32 +72,96 @@ export function AssetInventoryPage() {
       onSuccess: () => {
         toast({ title: "Asset registered", status: "success", duration: 2000 });
         setForm({ assetType: "software", name: "", value: "", version: "", notes: "" });
-        onClose();
+        onAddModalClose();
       },
       onError: (e) => toast({ title: "Failed to add asset", description: (e as Error).message, status: "error", duration: 3000 }),
     });
   };
 
+  const handleViewDetails = (asset: Asset) => {
+    setSelectedAsset(asset);
+    onDetailModalOpen();
+  };
+
+  const filteredAssets = assets.data?.data.filter(asset => 
+    asset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    asset.value.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
+
   return (
     <Box>
-      <HStack justify="space-between" mb={2}>
-        <Box>
-          <Heading size="lg">Asset Inventory / Vulnerability Scanner</Heading>
-          <Text color="text.muted" fontSize="sm" mt={1}>
-            Register IPs, domains, and software/vendor names to cross-match against the CVE Database.
-          </Text>
-        </Box>
-        <Button colorScheme="orange" leftIcon={<Plus size={16} />} onClick={onOpen}>
-          Add Asset
-        </Button>
-      </HStack>
+      {/* Enhanced Header */}
+      <Box mb={6}>
+        <Flex justify="space-between" align="center" mb={4}>
+          <HStack spacing={3}>
+            <Box 
+              p={3} 
+              borderRadius="xl" 
+              bg={useColorModeValue("blue.50", "blue.900/20")}
+              borderWidth="1px"
+              borderColor={useColorModeValue("blue.200", "blue.700")}
+            >
+              <Server size={24} color="#3b82f6" />
+            </Box>
+            <Box>
+              <Heading size="lg" mb={1}>Asset Inventory / Vulnerability Scanner</Heading>
+              <HStack spacing={2}>
+                <Badge colorScheme="blue" variant="subtle" px={2} py={1} borderRadius="md" fontSize="xs">
+                  <HStack spacing={1}>
+                    <Server size={10} />
+                    <Text>{summary.data?.totalAssets || 0} Assets</Text>
+                  </HStack>
+                </Badge>
+                <Badge colorScheme="red" variant="subtle" px={2} py={1} borderRadius="md" fontSize="xs">
+                  <HStack spacing={1}>
+                    <ShieldAlert size={10} />
+                    <Text>{summary.data?.assetsWithMatches || 0} Vulnerable</Text>
+                  </HStack>
+                </Badge>
+              </HStack>
+            </Box>
+          </HStack>
+          <HStack spacing={2}>
+            <Tooltip label="Table View">
+              <IconButton
+                aria-label="Table view"
+                icon={<List size={18} />}
+                variant={viewMode === 'table' ? 'solid' : 'outline'}
+                colorScheme="blue"
+                onClick={() => setViewMode('table')}
+              />
+            </Tooltip>
+            <Tooltip label="Card View">
+              <IconButton
+                aria-label="Card view"
+                icon={<Grid size={18} />}
+                variant={viewMode === 'card' ? 'solid' : 'outline'}
+                colorScheme="blue"
+                onClick={() => setViewMode('card')}
+              />
+            </Tooltip>
+            <Button leftIcon={<Plus size={16} />} colorScheme="blue" onClick={onAddModalOpen}>
+              Add Asset
+            </Button>
+          </HStack>
+        </Flex>
+        <Text color="text.muted" fontSize="sm">Register IPs, domains, and software/vendor names to cross-match against the CVE Database.</Text>
+        <Divider mt={4} borderColor="border.default" />
+      </Box>
 
-      <Alert status="info" mb={6} fontSize="sm">
-        <AlertIcon />
-        Cross-matching only applies to <b>software</b> assets, matched against real CVE vendor/product names ingested
-        from NVD. It's a vendor/product-name match, not precise per-version CPE matching (that data isn't ingested).
-        IP/domain assets are tracked for inventory only.
-      </Alert>
+      {/* Search Bar */}
+      <HStack mb={6}>
+        <InputGroup>
+          <InputLeftElement pointerEvents="none">
+            <Search size={16} color="#64748b" />
+          </InputLeftElement>
+          <Input
+            placeholder="Search assets by name or value..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </InputGroup>
+      </HStack>
 
       {/* Summary cards */}
       {summary.isLoading ? (
@@ -179,15 +255,24 @@ export function AssetInventoryPage() {
         )}
       </Box>
 
-      <Modal isOpen={isOpen} onClose={onClose}>
+      {/* Add Asset Modal */}
+      <Modal isOpen={isAddModalOpen} onClose={onAddModalClose} size="md">
         <ModalOverlay />
-        <ModalContent bg="bg.surface">
-          <ModalHeader>Register Asset</ModalHeader>
+        <ModalContent bg={cardBg}>
+          <ModalHeader>
+            <HStack spacing={2}>
+              <Plus size={20} color="#3b82f6" />
+              <Text>Register Asset</Text>
+            </HStack>
+          </ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4} align="stretch">
               <FormControl>
-                <FormLabel fontSize="sm">Type</FormLabel>
+                <HStack spacing={2} mb={2}>
+                  <Server size={14} color="#64748b" />
+                  <FormLabel fontSize="sm" fontWeight="medium">Type</FormLabel>
+                </HStack>
                 <Select value={form.assetType} onChange={(e) => setForm({ ...form, assetType: e.target.value })}>
                   <option value="software">Software / Vendor</option>
                   <option value="ip">IP Address</option>
@@ -195,13 +280,19 @@ export function AssetInventoryPage() {
                 </Select>
               </FormControl>
               <FormControl>
-                <FormLabel fontSize="sm">Name</FormLabel>
+                <HStack spacing={2} mb={2}>
+                  <Package size={14} color="#64748b" />
+                  <FormLabel fontSize="sm" fontWeight="medium">Name</FormLabel>
+                </HStack>
                 <Input placeholder="e.g. Production Web Server" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </FormControl>
               <FormControl>
-                <FormLabel fontSize="sm">
-                  {form.assetType === "software" ? "Vendor / Product name" : form.assetType === "ip" ? "IP Address" : "Domain"}
-                </FormLabel>
+                <HStack spacing={2} mb={2}>
+                  <Globe size={14} color="#64748b" />
+                  <FormLabel fontSize="sm" fontWeight="medium">
+                    {form.assetType === "software" ? "Vendor / Product name" : form.assetType === "ip" ? "IP Address" : "Domain"}
+                  </FormLabel>
+                </HStack>
                 <Input
                   fontFamily="mono"
                   placeholder={form.assetType === "software" ? "e.g. adobe" : form.assetType === "ip" ? "e.g. 203.0.113.5" : "e.g. example.com"}
@@ -211,19 +302,109 @@ export function AssetInventoryPage() {
               </FormControl>
               {form.assetType === "software" && (
                 <FormControl>
-                  <FormLabel fontSize="sm">Version (optional)</FormLabel>
+                  <HStack spacing={2} mb={2}>
+                    <Package size={14} color="#64748b" />
+                    <FormLabel fontSize="sm" fontWeight="medium">Version (optional)</FormLabel>
+                  </HStack>
                   <Input placeholder="e.g. 2021" value={form.version} onChange={(e) => setForm({ ...form, version: e.target.value })} />
                 </FormControl>
               )}
               <FormControl>
-                <FormLabel fontSize="sm">Notes (optional)</FormLabel>
+                <HStack spacing={2} mb={2}>
+                  <Server size={14} color="#64748b" />
+                  <FormLabel fontSize="sm" fontWeight="medium">Notes (optional)</FormLabel>
+                </HStack>
                 <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
               </FormControl>
             </VStack>
           </ModalBody>
           <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onClose}>Cancel</Button>
-            <Button colorScheme="orange" onClick={handleCreate} isLoading={createAsset.isPending}>Add Asset</Button>
+            <Button variant="outline" onClick={onAddModalClose}>Cancel</Button>
+            <Button colorScheme="blue" onClick={handleCreate} isLoading={createAsset.isPending} ml={3}>Add Asset</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Asset Details Modal */}
+      <Modal isOpen={isDetailModalOpen} onClose={onDetailModalClose} size="lg">
+        <ModalOverlay />
+        <ModalContent bg={cardBg}>
+          <ModalHeader>
+            <HStack spacing={2}>
+              <Eye size={20} color="#3b82f6" />
+              <Text>Asset Details</Text>
+            </HStack>
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {selectedAsset && (
+              <VStack spacing={4} align="stretch">
+                <SimpleGrid columns={2} spacing={4}>
+                  <Box>
+                    <Text fontSize="xs" color="text.muted" mb={1}>Type</Text>
+                    <Badge variant="outline">{selectedAsset.assetType}</Badge>
+                  </Box>
+                  <Box>
+                    <Text fontSize="xs" color="text.muted" mb={1}>Name</Text>
+                    <Text fontSize="sm" fontWeight="medium">{selectedAsset.name}</Text>
+                  </Box>
+                  <Box>
+                    <Text fontSize="xs" color="text.muted" mb={1}>Value</Text>
+                    <Text fontSize="sm" fontFamily="mono">{selectedAsset.value}</Text>
+                  </Box>
+                  <Box>
+                    <Text fontSize="xs" color="text.muted" mb={1}>Version</Text>
+                    <Text fontSize="sm">{selectedAsset.version ?? "—"}</Text>
+                  </Box>
+                  <Box>
+                    <Text fontSize="xs" color="text.muted" mb={1}>CVE Matches</Text>
+                    <Badge colorScheme="red" variant="subtle" px={2} py={1} borderRadius="full" fontSize="xs">
+                      {selectedAsset.matchedCveIds.length} CVEs
+                    </Badge>
+                  </Box>
+                  <Box>
+                    <Text fontSize="xs" color="text.muted" mb={1}>Last Matched</Text>
+                    <Text fontSize="sm">{selectedAsset.lastMatchedAt ? new Date(selectedAsset.lastMatchedAt).toLocaleString() : "—"}</Text>
+                  </Box>
+                </SimpleGrid>
+                {selectedAsset.notes && (
+                  <Box>
+                    <Text fontSize="xs" color="text.muted" mb={1}>Notes</Text>
+                    <Text fontSize="sm">{selectedAsset.notes}</Text>
+                  </Box>
+                )}
+                {selectedAsset.matchedCveIds.length > 0 && (
+                  <Box>
+                    <Text fontSize="xs" color="text.muted" mb={2}>Matched CVEs</Text>
+                    <VStack spacing={2} align="stretch">
+                      {selectedAsset.matchedCveIds.slice(0, 5).map((cveId) => (
+                        <Link key={cveId} to="/cves/$cveId" params={{ cveId }}>
+                          <Text 
+                            color="accent.400" 
+                            fontSize="sm" 
+                            fontFamily="mono" 
+                            p={2} 
+                            bg={useColorModeValue("gray.50", "charcoal.900")} 
+                            borderRadius="md" 
+                            _hover={{ textDecoration: "underline" }}
+                          >
+                            {cveId}
+                          </Text>
+                        </Link>
+                      ))}
+                      {selectedAsset.matchedCveIds.length > 5 && (
+                        <Text fontSize="xs" color="text.muted">
+                          +{selectedAsset.matchedCveIds.length - 5} more CVEs
+                        </Text>
+                      )}
+                    </VStack>
+                  </Box>
+                )}
+              </VStack>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="outline" onClick={onDetailModalClose}>Close</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
